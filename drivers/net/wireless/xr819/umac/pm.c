@@ -53,9 +53,10 @@ int __mac80211_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
 		return -EBUSY;
 	}
 
+/*
 	if (!local->open_count)
 		goto suspend;
-
+*/
 	mac80211_scan_cancel(local);
 
 	if (hw->flags & IEEE80211_HW_AMPDU_AGGREGATION) {
@@ -93,7 +94,7 @@ int __mac80211_suspend(struct ieee80211_hw *hw, struct cfg80211_wowlan *wowlan)
 		del_timer_sync(&sdata->dynamic_ps_timer);
 	}
 
-	local->wowlan = wowlan && local->open_count;
+	local->wowlan = true;
 	if (local->wowlan) {
 		int err = drv_suspend(local, wowlan);
 		if (err < 0) {

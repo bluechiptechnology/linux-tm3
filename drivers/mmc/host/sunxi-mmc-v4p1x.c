@@ -710,4 +710,7 @@ void sunxi_mmc_init_priv_v4p1x(struct sunxi_mmc_host *host,
 	host->sunxi_mmc_oclk_en = sunxi_mmc_oclk_onoff;
 	host->sunxi_mmc_judge_retry = sunxi_mmc_judge_retry_v4p1x;
 	/*sunxi_of_parse_clk_dly(host); */
+#ifdef CONFIG_ARCH_SUN50IW9P1
+	host->des_addr_shift = 2;
+#endif
 }

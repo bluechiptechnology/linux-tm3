@@ -414,6 +414,101 @@ static ssize_t dump_clk_dly_show(struct device *dev,
 	return p - buf;
 }
 
+int sunxi_mmc_uperf_stat(struct sunxi_mmc_host *host,
+	struct mmc_data *data,
+	struct mmc_request *mrq_busy,
+	bool bhalf)
+{
+	ktime_t diff;
+
+	if (!bhalf) {
+		if (host->perf_enable && data) {
+			diff = ktime_sub(ktime_get(), host->perf.start);
+			if (data->flags & MMC_DATA_READ) {
+				host->perf.rbytes += data->bytes_xfered;
+				host->perf.rtime =
+					ktime_add(host->perf.rtime, diff);
+			} else if (data->flags & MMC_DATA_WRITE) {
+				if (!mrq_busy) {
+					host->perf.wbytes +=
+						data->bytes_xfered;
+					host->perf.wtime =
+					ktime_add(host->perf.wtime, diff);
+				}
+				host->perf.wbytestran += data->bytes_xfered;
+				host->perf.wtimetran =
+					ktime_add(host->perf.wtimetran, diff);
+			}
+		}
+	} else {
+		if (host->perf_enable
+			&& mrq_busy->data
+			&& (mrq_busy->data->flags & MMC_DATA_WRITE)) {
+			diff = ktime_sub(ktime_get(), host->perf.start);
+			host->perf.wbytes += mrq_busy->data->bytes_xfered;
+			host->perf.wtime = ktime_add(host->perf.wtime, diff);
+		}
+	}
+	return 0;
+}
+
+static ssize_t
+sunxi_mmc_show_perf(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct mmc_host	*mmc = platform_get_drvdata(pdev);
+	struct sunxi_mmc_host *host = mmc_priv(mmc);
+	int64_t rtime_drv, wtime_drv, wtime_drv_tran;
+	int64_t rbytes_drv, wbytes_drv, wbytes_drv_tran;
+
+
+	mmc_claim_host(mmc);
+
+	rbytes_drv = host->perf.rbytes;
+	wbytes_drv = host->perf.wbytes;
+	wbytes_drv_tran = host->perf.wbytestran;
+
+	rtime_drv = ktime_to_us(host->perf.rtime);
+	wtime_drv = ktime_to_us(host->perf.wtime);
+	wtime_drv_tran = ktime_to_us(host->perf.wtimetran);
+
+	mmc_release_host(mmc);
+
+	return snprintf(buf, PAGE_SIZE, "Write performance at host driver Level:"
+					"%lld bytes in %lld microseconds\n"
+					"Read performance at host driver Level:"
+					"%lld bytes in %lld microseconds\n"
+					"write performance at host driver Level(no wait busy):"
+					"%lld bytes in %lld microseconds\n",
+					wbytes_drv, wtime_drv,
+					rbytes_drv, rtime_drv,
+					wbytes_drv_tran, wtime_drv_tran);
+}
+
+static ssize_t
+sunxi_mmc_set_perf(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct mmc_host	*mmc = platform_get_drvdata(pdev);
+	struct sunxi_mmc_host *host = mmc_priv(mmc);
+	int64_t value;
+
+	sscanf(buf, "%lld", &value);
+	printk("set perf value %lld\n", value);
+;
+	mmc_claim_host(mmc);
+	if (!value) {
+		memset(&host->perf, 0, sizeof(host->perf));
+		host->perf_enable = false;
+	} else {
+		host->perf_enable = true;
+	}
+	mmc_release_host(mmc);
+
+	return count;
+}
+
 int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 {
 	int ret;
@@ -426,6 +521,13 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 	ret = device_create_file(&pdev->dev, &host->maual_insert);
 	if (ret)
 		return ret;
+
+	host->host_perf.show = sunxi_mmc_show_perf;
+	host->host_perf.store = sunxi_mmc_set_perf;
+	sysfs_attr_init(&(host->host_perf.attr));
+	host->host_perf.attr.name = "sunxi_host_perf";
+	host->host_perf.attr.mode = S_IRUGO | S_IWUSR;
+	ret = device_create_file(&pdev->dev, &host->host_perf);
 
 	host->dump_register = dump_register;
 	host->dump_register[0].show = dump_host_reg_show;
@@ -466,6 +568,7 @@ int mmc_create_sys_fs(struct sunxi_mmc_host *host, struct platform_device *pdev)
 void mmc_remove_sys_fs(struct sunxi_mmc_host *host,
 		       struct platform_device *pdev)
 {
+	device_remove_file(&pdev->dev, &host->host_perf);
 	device_remove_file(&pdev->dev, &host->maual_insert);
 	device_remove_file(&pdev->dev, &host->dump_register[0]);
 	device_remove_file(&pdev->dev, &host->dump_register[1]);

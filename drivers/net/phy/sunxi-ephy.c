@@ -41,6 +41,14 @@
 #define EPHY_CTRL 0x6000
 #define EPHY_SID 0x8004
 
+#define WAIT_MAX_COUNT 10
+
+/* Register bits */
+#define EXTEPHY_CTRL0_RESET_INVALID	(0x1 << 0)
+#define EXTEPHY_CTRL0_SYSCLK_GATING	(0x1 << 1)
+#define EXTEPHY_CTRL1_IO_EN_BITS	(0xf)
+#define EPHY_CTRL_DEFAULT		(0x5)
+
 atomic_t ephy_en;
 
 struct ephy_res {
@@ -214,13 +222,18 @@ static void sunxi_ephy_enable(struct ephy_res *priv)
 {
 #ifdef CONFIG_MFD_ACX00
 	int value;
+	unsigned char i = 0;
 #if defined(CONFIG_ARCH_SUN50IW6)
 	u16 ephy_cali = 0;
 #endif
 
 	if (!acx00_enable()) {
-		msleep(50);
-		if (!acx00_enable()) {
+		for (i = 0; i < WAIT_MAX_COUNT; i++) {
+			msleep(10);
+			if (acx00_enable())
+				break;
+		}
+		if (i == WAIT_MAX_COUNT) {
 			pr_err("acx00 is no enable, and sunxi_ephy_enable is fail\n");
 			return;
 		}
@@ -300,7 +313,22 @@ static int ephy_plat_remove(struct platform_device *pdev)
 
 static int sunxi_phy_suspend(struct device *dev)
 {
+	int value;
+	struct ephy_res *priv = &ephy_priv;
+
 	atomic_set(&ephy_en, 0);
+
+	/* reset regs values to the original state */
+	value = acx00_reg_read(priv->acx, EXTEPHY_CTRL0);
+	value &= ~(EXTEPHY_CTRL0_RESET_INVALID | EXTEPHY_CTRL0_SYSCLK_GATING);
+	acx00_reg_write(priv->acx, EXTEPHY_CTRL0, value);
+	value = acx00_reg_read(priv->acx, EXTEPHY_CTRL1);
+	value &= ~(EXTEPHY_CTRL1_IO_EN_BITS);
+	acx00_reg_write(priv->acx, EXTEPHY_CTRL1, value);
+	value = acx00_reg_read(priv->acx, EPHY_CTRL);
+	value = EPHY_CTRL_DEFAULT;	/* default value due to spec */
+	acx00_reg_write(priv->acx, EPHY_CTRL, value);
+
 	return 0;
 }
 

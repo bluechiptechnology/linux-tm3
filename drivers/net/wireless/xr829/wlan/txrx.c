@@ -2104,9 +2104,11 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
 				/* Shedule unjoin work */
 				txrx_printk(XRADIO_DBG_WARN,
 					    "Issue unjoin command(TX) by self.\n");
-				wsm_lock_tx_async(hw_priv);
-				if (queue_work(hw_priv->workqueue, &priv->unjoin_work) <= 0)
-					wsm_unlock_tx(hw_priv);
+				if (cancel_delayed_work_sync(&priv->unjoin_delayed_work)) {
+					wsm_lock_tx_async(hw_priv);
+					if (queue_work(hw_priv->workqueue, &priv->unjoin_work) <= 0)
+						wsm_unlock_tx(hw_priv);
+				}
 			}
 		}
 

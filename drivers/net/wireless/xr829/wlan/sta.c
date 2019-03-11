@@ -144,6 +144,12 @@ int xradio_start(struct ieee80211_hw *dev)
 		return -ETIMEDOUT;
 	}
 
+	if (wait_event_interruptible_timeout(hw_priv->wsm_wakeup_done,
+				XRADIO_RESUME == atomic_read(&hw_priv->suspend_state), 3*HZ) <= 0) {
+		sta_printk(XRADIO_DBG_ERROR,
+				   "%s:driver is suspending \n", __func__);
+		return -ETIMEDOUT;
+	}
 	down(&hw_priv->conf_lock);
 
 #ifdef CONFIG_XRADIO_TESTMODE
@@ -399,11 +405,11 @@ void xradio_remove_interface(struct ieee80211_hw *dev,
 	del_timer_sync(&priv->mcast_timeout);
 
 	down(&hw_priv->scan.lock);
+	if (atomic_xchg(&priv->delayed_unjoin, 0)) {
+		wsm_unlock_tx(hw_priv);
+		sta_printk(XRADIO_DBG_ERROR, "%s:delayed_unjoin exist!\n", __func__);
+	}
 	if (priv->join_status == XRADIO_JOIN_STATUS_STA) {
-		if (atomic_xchg(&priv->delayed_unjoin, 0)) {
-			wsm_unlock_tx(hw_priv);
-			sta_printk(XRADIO_DBG_ERROR, "%s:delayed_unjoin exist!\n", __func__);
-		}
 		cancel_work_sync(&priv->unjoin_work);
 		wsm_lock_tx(hw_priv);
 		xradio_unjoin_work(&priv->unjoin_work);
@@ -2478,6 +2484,17 @@ void xradio_unjoin_work(struct work_struct *work)
 	wsm_unlock_tx(hw_priv);
 }
 
+void xradio_unjoin_delayed_work(struct work_struct *work)
+{
+	struct xradio_vif *priv =
+		container_of(work, struct xradio_vif, unjoin_delayed_work.work);
+
+	struct xradio_common *hw_priv = xrwl_vifpriv_to_hwpriv(priv);
+
+	wsm_lock_tx_async(hw_priv);
+	xradio_unjoin_work(&priv->unjoin_work);
+}
+
 int xradio_enable_listening(struct xradio_vif *priv,
 				struct ieee80211_channel *chan)
 {
@@ -2709,6 +2726,7 @@ int xradio_vif_setup(struct xradio_vif *priv)
 	INIT_WORK(&priv->join_work, xradio_join_work);
 	INIT_DELAYED_WORK(&priv->join_timeout, xradio_join_timeout);
 	INIT_WORK(&priv->unjoin_work, xradio_unjoin_work);
+	INIT_DELAYED_WORK(&priv->unjoin_delayed_work, xradio_unjoin_delayed_work);
 	INIT_WORK(&priv->wep_key_work, xradio_wep_key_work);
 	INIT_WORK(&priv->offchannel_work, xradio_offchannel_work);
 	INIT_DELAYED_WORK(&priv->bss_loss_work, xradio_bss_loss_work);

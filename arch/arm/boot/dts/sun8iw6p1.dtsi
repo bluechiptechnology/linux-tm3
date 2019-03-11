@@ -1913,7 +1913,7 @@
 			clocks = <&clk_hosc>;
 			sensor_num = <3>;
 			combine_num = <2>;
-			shut_temp= <110>;
+			shut_temp= <110000>;
 			status = "okay";
 
 			ths_combine0:ths_combine0{
@@ -1974,37 +1974,37 @@
 
 				trips{
 					cpu_trip0:t0{
-						temperature = <50>;
+						temperature = <50000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip1:t1{
-						temperature = <60>;
+						temperature = <60000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip2:t2{
-						temperature = <70>;
+						temperature = <70000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip3:t3{
-						temperature = <85>;
+						temperature = <85000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip4:t4{
-						temperature = <95>;
+						temperature = <95000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip5:t5{
-						temperature = <105>;
+						temperature = <105000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					crt_trip0:t6{
-						temperature = <110>;
+						temperature = <110000>;
 						type = "critical";
 						hysteresis = <0>;
 					};
@@ -2052,22 +2052,22 @@
 
 				trips{
 					gpu_trip0:t0{
-						temperature = <80>;
+						temperature = <80000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					gpu_trip1:t1{
-						temperature = <90>;
+						temperature = <90000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					gpu_trip2:t2{
-						temperature = <100>;
+						temperature = <100000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					crt_trip1:t3{
-						temperature = <110>;
+						temperature = <110000>;
 						type = "critical";
 						hysteresis = <0>;
 					};

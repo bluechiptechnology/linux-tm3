@@ -12,10 +12,14 @@
 #ifndef __SUNXI_THS_CORE_H__
 #define __SUNXI_THS_CORE_H__
 
+/* Temperature Limits */
+#define THS_MAX_TEMPERATURE	(180000)
+#define THS_MIN_TEMPERATURE	(-60000)
+
 /* GET TMEP RETURN VALUE */
-#define NO_DATA_INTTERUPT	(-41)
-#define OUT_THE_THERMAL_LIMIT	(-42)
-#define WRONG_SENSOR_ID		(-43)
+#define NO_DATA_INTTERUPT	(-61000)
+#define OUT_THE_THERMAL_LIMIT	(-62000)
+#define WRONG_SENSOR_ID		(-63000)
 
 #define MAX_SENSOR_NUM		(5)
 #define REG_HAVE_SHUT_TEMP_NUM	(2)

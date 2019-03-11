@@ -436,6 +436,7 @@ static void xradio_itp_tx_stop(struct xradio_common *priv)
 	itp_printk(XRADIO_DBG_MSG, "[ITP] TX stop\n");
 	atomic_set(&itp->stop_tx, 1);
 	flush_workqueue(priv->workqueue);
+	flush_workqueue(priv->spare_workqueue);
 
 	/* time for FW to confirm all tx requests */
 	msleep(500);

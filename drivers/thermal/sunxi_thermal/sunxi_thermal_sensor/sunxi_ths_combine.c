@@ -92,19 +92,18 @@ static int sunxi_combine_get_temp(void *data, int *temperature)
 	if (!is_suspend) {
 		switch (sensor->combine->type) {
 		case COMBINE_MAX_TEMP:
-			for (i = 0, target = -40;
+			for (i = 0;
 				i < sensor->combine->combine_ths_count; i++) {
 				sensor_id = sensor->combine->combine_ths_id[i];
 				ret = controller->ops->get_temp(controller,
 							sensor_id, &temp);
 				if (ret)
 					return ret;
-				if (temp > target)
-					target = temp;
+				target = temp;
 			}
 			break;
 		case COMBINE_AVG_TMP:
-			for (i = 0, target = 0;
+			for (i = 0;
 				i < sensor->combine->combine_ths_count; i++) {
 				sensor_id = sensor->combine->combine_ths_id[i];
 				ret = controller->ops->get_temp(controller,
@@ -116,15 +115,14 @@ static int sunxi_combine_get_temp(void *data, int *temperature)
 			target /= sensor->combine->combine_ths_count;
 			break;
 		case COMBINE_MIN_TMP:
-			for (i = 0, target = 180;
+			for (i = 0;
 				i < sensor->combine->combine_ths_count; i++) {
 				sensor_id = sensor->combine->combine_ths_id[i];
 				ret = controller->ops->get_temp(controller,
 							sensor_id, &temp);
 				if (ret)
 					return ret;
-				if (temp < target)
-					target = temp;
+				target = temp;
 			}
 			break;
 		default:
@@ -135,7 +133,7 @@ static int sunxi_combine_get_temp(void *data, int *temperature)
 	} else {
 		*temperature = sensor->last_temp;
 	}
-	thsprintk("get temp %d\n", (*temperature));
+	thsprintk("get temp %d millicelsius\n", (*temperature));
 	return 0;
 }
 

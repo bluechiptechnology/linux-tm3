@@ -1073,6 +1073,32 @@ int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle)
 }
 EXPORT_SYMBOL(ion_share_dma_buf_fd);
 
+/**
+ * @name       :ion_share_dma_buf_fd2
+ * @brief      :same with ion_share_dma_buf_fd except always get fd that
+ *		greater then 2
+ * @client:	the client
+ * @handle:	the handle
+ */
+int ion_share_dma_buf_fd2(struct ion_client *client, struct ion_handle *handle)
+{
+	struct dma_buf *dmabuf;
+	int fd;
+
+	dmabuf = ion_share_dma_buf(client, handle);
+	if (IS_ERR(dmabuf))
+		return PTR_ERR(dmabuf);
+
+	fd = get_unused_fd_flags2(O_CLOEXEC);
+	if (fd < 0)
+		dma_buf_put(dmabuf);
+	else
+		fd_install(fd, dmabuf->file);
+
+	return fd;
+}
+EXPORT_SYMBOL(ion_share_dma_buf_fd2);
+
 struct ion_handle *ion_import_dma_buf(struct ion_client *client,
 				      struct dma_buf *dmabuf)
 {
@@ -1505,3 +1531,17 @@ int ion_phys(struct ion_client *client, struct ion_handle *handle,
 	return ret;
 }
 EXPORT_SYMBOL(ion_phys);
+
+int ion_set_dmabuf_flag(struct dma_buf *buf, unsigned long flags)
+{
+	struct ion_buffer *buffer;
+
+	if (!buf)
+		return -1;
+
+	buffer = buf->priv;
+
+	buffer->flags = flags;
+	return 0;
+}
+EXPORT_SYMBOL(ion_set_dmabuf_flag);

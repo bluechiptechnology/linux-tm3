@@ -727,6 +727,13 @@ int xradio_load_firmware(struct xradio_common *hw_priv)
 		goto out;
 	}
 
+#ifdef SUPPORT_DPLL_CHECK
+	/*Checking DPLL value and correct it if need.*/
+	xradio_update_dpllctrl(hw_priv, xradio_dllctrl_convert(dpll));
+#else
+	xradio_dbg(XRADIO_DBG_ALWY, "%s: not need check dpll.\n", __func__);
+#endif
+
 #if (DBG_XRADIO_HIF)
 
 	if (hif_test_rw) {
@@ -740,13 +747,6 @@ int xradio_load_firmware(struct xradio_common *hw_priv)
 		}
 	}
 
-#endif
-
-#ifdef SUPPORT_DPLL_CHECK
-	/*Checking DPLL value and correct it if need.*/
-	xradio_update_dpllctrl(hw_priv, xradio_dllctrl_convert(dpll));
-#else
-	xradio_dbg(XRADIO_DBG_ALWY, "%s: not need check dpll.\n", __func__);
 #endif
 
 	/* Down bootloader. */

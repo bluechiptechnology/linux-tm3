@@ -1372,6 +1372,7 @@ func_exit:
 }
 
 extern char *rtw_initmac;
+extern int get_wifi_custom_mac_address(char *addr_str);
 /**
  * rtw_macaddr_cfg - Decide the mac address used
  * @out: buf to store mac address decided
@@ -1381,6 +1382,7 @@ void rtw_macaddr_cfg(u8 *out, const u8 *hw_mac_addr)
 {
 #define DEFAULT_RANDOM_MACADDR 1
 	u8 mac[ETH_ALEN];
+	u8 addr_str[20];
 
 	if (out == NULL) {
 		rtw_warn_on(1);
@@ -1402,6 +1404,12 @@ void rtw_macaddr_cfg(u8 *out, const u8 *hw_mac_addr)
 	if (rtw_get_mac_addr_intel(mac) == 0)
 		goto err_chk;
 #endif
+
+	if (get_wifi_custom_mac_address(addr_str) != -1) {
+		sscanf(addr_str, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+				&mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
+		goto err_chk;
+	}
 
 	/* Use the mac address stored in the Efuse */
 	if (hw_mac_addr) {

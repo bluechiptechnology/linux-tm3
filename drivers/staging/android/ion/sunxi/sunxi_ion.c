@@ -195,6 +195,23 @@ static int sunxi_ion_remove(struct platform_device *pdev)
 	return 0;
 }
 
+struct ion_client *sunxi_ion_client_create(const char *name)
+{
+	/*
+	 * The assumption is that if there is a NULL device, the ion
+	 * driver has not yet probed.
+	 */
+	if (IS_ERR_OR_NULL(idev))
+		return ERR_PTR(-EPROBE_DEFER);
+
+	if (IS_ERR(idev))
+		return (struct ion_client *)idev;
+
+	return ion_client_create(idev, name);
+}
+
+EXPORT_SYMBOL(sunxi_ion_client_create);
+
 static const struct of_device_id sunxi_ion_match_table[] = {
 	{.compatible = "allwinner,sunxi-ion"},
 	{},

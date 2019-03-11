@@ -1140,20 +1140,19 @@ static int xradio_bh_read_ctrl_reg(struct xradio_common *hw_priv,
 static inline int xradio_device_sleep(struct xradio_common *hw_priv)
 {
 	int ret;
-	ret = xradio_reg_bit_operate(hw_priv, HIF_CONTROL_REG_ID,
-								0, HIF_CTRL_WUP_BIT);
+	ret = xradio_reg_write_32(hw_priv, HIF_CONTROL_REG_ID, 0);
 	if (ret) {
 		hw_priv->bh_error = 1;
 		bh_printk(XRADIO_DBG_ERROR, "%s:control reg failed.\n", __func__);
 	}
+
 	return ret;
 }
 
 struct timeval wakeup_time;
-static int xradio_device_wakeup(struct xradio_common *hw_priv)
+static int xradio_device_wakeup(struct xradio_common *hw_priv, u16 *ctrl_reg_ptr)
 {
 	int ret = 0;
-	u16 ctrl_reg = 0;
 	unsigned long time = 0;
 
 	bh_printk(XRADIO_DBG_MSG, "%s\n", __func__);
@@ -1164,14 +1163,14 @@ static int xradio_device_wakeup(struct xradio_common *hw_priv)
 	if (SYS_WARN(ret))
 		return ret;
 
-	ret = xradio_bh_read_ctrl_reg(hw_priv, &ctrl_reg);
+	ret = xradio_bh_read_ctrl_reg(hw_priv, ctrl_reg_ptr);
 	if (SYS_WARN(ret))
 		return ret;
 
 	/* If the device returns WLAN_RDY as 1, the device is active and will
 	 * remain active. */
 	time = jiffies + DEV_WAKEUP_MAX_TIME;
-	while (!(ctrl_reg & (HIF_CTRL_RDY_BIT|HIF_CTRL_NEXT_LEN_MASK)) &&
+	while (!(*ctrl_reg_ptr & (HIF_CTRL_RDY_BIT|HIF_CTRL_NEXT_LEN_MASK)) &&
 		   time_before(jiffies, time) && !ret) {
 #ifdef BH_USE_SEMAPHORE
 		msleep(1);
@@ -1179,19 +1178,19 @@ static int xradio_device_wakeup(struct xradio_common *hw_priv)
 		wait_event_timeout(hw_priv->bh_wq,
 				atomic_read(&hw_priv->bh_rx), DEV_WAKEUP_WAIT_TIME);
 #endif
-		ret = xradio_bh_read_ctrl_reg(hw_priv, &ctrl_reg);
+		ret = xradio_bh_read_ctrl_reg(hw_priv, ctrl_reg_ptr);
 	}
 
 	PERF_INFO_STAMP(&wakeup_time, &dev_wake, 0);
 
-	if (likely(ctrl_reg & HIF_CTRL_RDY_BIT)) {
+	if (likely(*ctrl_reg_ptr & HIF_CTRL_RDY_BIT)) {
 		bh_printk(XRADIO_DBG_NIY, "Device awake, t=%ldms.\n",
 			(jiffies+DEV_WAKEUP_MAX_TIME-time)*1000/HZ);
 		return 1;
-	} else if (ctrl_reg & HIF_CTRL_NEXT_LEN_MASK) { /*device has data to rx.*/
+	} else if (*ctrl_reg_ptr & HIF_CTRL_NEXT_LEN_MASK) { /*device has data to rx.*/
 		bh_printk(XRADIO_DBG_NIY, "To rx data before wakeup, len=%d.\n",
-				(ctrl_reg & HIF_CTRL_NEXT_LEN_MASK)<<1);
-		return (int)(ctrl_reg & HIF_CTRL_NEXT_LEN_MASK);
+				(*ctrl_reg_ptr & HIF_CTRL_NEXT_LEN_MASK)<<1);
+		return (int)(*ctrl_reg_ptr & HIF_CTRL_NEXT_LEN_MASK);
 	} else {
 		bh_printk(XRADIO_DBG_ERROR, "Device cannot wakeup in %dms.\n",
 				DEV_WAKEUP_MAX_TIME*1000/HZ);
@@ -1778,7 +1777,7 @@ tx:
 			PERF_INFO_GETTIME(&tx_start_time1);
 			/* Wake up the devices */
 			if (hw_priv->device_can_sleep) {
-				ret = xradio_device_wakeup(hw_priv);
+				ret = xradio_device_wakeup(hw_priv, &ctrl_reg);
 				if (SYS_WARN(ret < 0)) {
 					hw_priv->bh_error = __LINE__;
 					break;

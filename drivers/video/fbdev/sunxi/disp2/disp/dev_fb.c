@@ -16,6 +16,7 @@
 #if defined(SUPPORT_EDP)
 #include "de/disp_edp.h"
 #endif /*endif defined(SUPPORT_EDP) */
+#include <linux/ion_sunxi.h>
 
 #define VSYNC_NUM 4
 struct fb_info_t {
@@ -35,8 +36,10 @@ struct fb_info_t {
 	ktime_t vsync_timestamp[DISP_SCREEN_NUM][VSYNC_NUM];
 	u32 vsync_timestamp_head[DISP_SCREEN_NUM];
 	u32 vsync_timestamp_tail[DISP_SCREEN_NUM];
+	int mem_cache_flag[8];
 
 	int blank[3];
+	struct disp_ion_mem *mem[8];
 };
 
 static struct fb_info_t g_fbi;
@@ -153,9 +156,16 @@ s32 fb_draw_gray_pictures(char *base, u32 width, u32 height,
 
 static int fb_map_video_memory(struct fb_info *info)
 {
+#if defined(CONFIG_ION_SUNXI)
+	g_fbi.mem[info->node] =
+	    disp_ion_malloc(info->fix.smem_len, (u32 *)(&info->fix.smem_start));
+	info->screen_base = (char __iomem *)g_fbi.mem[info->node]->vaddr;
+#else
 	info->screen_base =
 	    (char __iomem *)disp_malloc(info->fix.smem_len,
 					(u32 *) (&info->fix.smem_start));
+#endif
+
 	if (info->screen_base) {
 		__inf("%s(reserve),va=0x%p, pa=0x%p size:0x%x\n", __func__,
 		      (void *)info->screen_base,
@@ -185,8 +195,14 @@ static inline void fb_unmap_video_memory(struct fb_info *info)
 	__inf("%s: screen_base=0x%p, smem=0x%p, len=0x%x\n", __func__,
 	      (void *)info->screen_base,
 	      (void *)info->fix.smem_start, info->fix.smem_len);
+
+#if defined(CONFIG_ION_SUNXI)
+	disp_ion_free((void *__force)info->screen_base,
+		  (void *)info->fix.smem_start, info->fix.smem_len);
+#else
 	disp_free((void *__force)info->screen_base,
 		  (void *)info->fix.smem_start, info->fix.smem_len);
+#endif
 	info->screen_base = 0;
 	info->fix.smem_start = 0;
 	g_fb_addr.fb_paddr = 0;
@@ -662,7 +678,6 @@ static int sunxi_fb_pan_display(struct fb_var_screeninfo *var,
 
 	num_screens = bsp_disp_feat_get_num_screens();
 
-	__inf("fb %d, pos=%d,%d\n", info->node, var->xoffset, var->yoffset);
 
 	for (sel = 0; sel < num_screens; sel++) {
 		if (sel == g_fbi.fb_mode[info->node]) {
@@ -694,6 +709,7 @@ static int sunxi_fb_pan_display(struct fb_var_screeninfo *var,
 				    ((long long)var->xres) << 32;
 				config.info.fb.crop.height =
 				    ((long long)(var->yres / buffer_num)) << 32;
+
 				if (mgr->set_layer_config(mgr, &config, 1)
 				    != 0) {
 					__wrn
@@ -835,15 +851,29 @@ static int sunxi_fb_cursor(struct fb_info *info, struct fb_cursor *cursor)
 
 static int sunxi_fb_mmap(struct fb_info *info, struct vm_area_struct *vma)
 {
-	unsigned int offset = vma->vm_pgoff << PAGE_SHIFT;
+	unsigned int off = vma->vm_pgoff << PAGE_SHIFT;
 
-	if (offset < info->fix.smem_len) {
+	if (off < info->fix.smem_len) {
+#if defined(CONFIG_ION_SUNXI)
+		if (g_fbi.mem_cache_flag[info->node])
+			ion_set_dmabuf_flag(g_fbi.mem[info->node]->p_item->buf,
+					    ION_FLAG_CACHED |
+						ION_FLAG_CACHED_NEEDS_SYNC);
+		else
+			ion_set_dmabuf_flag(g_fbi.mem[info->node]->p_item->buf,
+					    0);
+
+		return g_fbi.mem[info->node]->p_item->buf->ops->mmap(
+		    g_fbi.mem[info->node]->p_item->buf, vma);
+
+#endif
 		return dma_mmap_writecombine(g_fbi.dev, vma, info->screen_base,
-				info->fix.smem_start,
-				info->fix.smem_len);
+				  info->fix.smem_start,
+				  info->fix.smem_len);
 	}
 
 	return -EINVAL;
+
 }
 
 /**
@@ -1079,10 +1109,15 @@ static int sunxi_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 	return 0;
 }
 
+/*custom ioctl command here*/
+#define FBIO_CACHE_SYNC         0x4630
+#define FBIO_ENABLE_CACHE       0x4631
 static int sunxi_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			  unsigned long arg)
 {
 	long ret = 0;
+	void __user *argp = (void __user *)arg;
+	unsigned long karg[4];
 
 	switch (cmd) {
 #if 0
@@ -1118,6 +1153,14 @@ static int sunxi_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 #endif
+	case FBIO_ENABLE_CACHE:
+		{
+			if (copy_from_user((void *)karg, argp,
+					   sizeof(unsigned long)))
+				return -EFAULT;
+			g_fbi.mem_cache_flag[info->node] = (karg[0] == 1)?1:0;
+			break;
+		}
 
 	case FBIO_WAITFORVSYNC:
 		{
@@ -1174,6 +1217,16 @@ static int sunxi_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
+	case FBIO_CACHE_SYNC:
+		{
+#if defined(CONFIG_ION_SUNXI)
+			disp_ion_flush_cache(
+			    (void *)g_fbi.mem[info->node]->vaddr,
+			    g_fbi.mem[info->node]->size);
+#endif
+		break;
+	}
+
 	default:
 		break;
 	}
@@ -1185,6 +1238,9 @@ static struct fb_ops dispfb_ops = {
 	.fb_open = sunxi_fb_open,
 	.fb_release = sunxi_fb_release,
 	.fb_pan_display = sunxi_fb_pan_display,
+#if defined(CONFIG_COMPAT)
+	.fb_compat_ioctl = sunxi_fb_ioctl,
+#endif
 	.fb_ioctl = sunxi_fb_ioctl,
 	.fb_check_var = sunxi_fb_check_var,
 	.fb_set_par = sunxi_fb_set_par,
@@ -1676,6 +1732,11 @@ static s32 display_fb_request(u32 fb_id, struct disp_fb_create_info *fb_para)
 			config.info.fb.size[2].height = fb_para->height;
 			config.info.fb.color_space = DISP_BT601;
 
+#if defined(CONFIG_ION_SUNXI)
+			disp_ion_flush_cache(
+			    (void *)g_fbi.mem[info->node]->vaddr,
+			    g_fbi.mem[info->node]->size);
+#endif
 #if !defined(CONFIG_EINK_PANEL_USED)
 			if (mgr && mgr->set_layer_config)
 				mgr->set_layer_config(mgr, &config, 1);

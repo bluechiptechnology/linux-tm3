@@ -216,6 +216,10 @@ struct mmc_supply {
 	struct regulator *vmmc;		/* Card power supply */
 	struct regulator *vqmmc;	/* Optional Vccq supply */
 	struct regulator *vdmmc;	/* Optional card detect pin supply */
+	struct regulator *vdmmc33sw;	/* SD card PMU control*/
+	struct regulator *vdmmc18sw;
+	struct regulator *vqmmc33sw;	/* SD card PMU control*/
+	struct regulator *vqmmc18sw;
 };
 
 struct mmc_host {

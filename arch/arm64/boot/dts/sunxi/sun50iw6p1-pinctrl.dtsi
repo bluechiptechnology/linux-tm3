@@ -388,6 +388,15 @@
 				allwinner,pull = <1>;
 			};
 
+			sdc0_pins_c: sdc0@2 {
+				allwinner,pins = "PF0", "PF1", "PF2",
+						 "PF3", "PF4", "PF5";
+				allwinner,function = "uart0_jtag";
+				allwinner,muxsel = <3>;
+				allwinner,drive = <1>;
+				allwinner,pull = <1>;
+			};
+
 			sdc1_pins_a: sdc1@0 {
 				allwinner,pins = "PG0", "PG1", "PG2",
 						 "PG3", "PG4", "PG5";
@@ -744,7 +753,7 @@
 				allwinner,pins = "PB0";
 				allwinner,function = "ac200";
 				allwinner,muxsel = <2>;
-				allwinner,drive = <1>;
+				allwinner,drive = <0>;
 				allwinner,pull = <0>;
 			};
 
@@ -752,7 +761,7 @@
 				allwinner,pins = "PB0";
 				allwinner,function = "io_disabled";
 				allwinner,muxsel = <7>;
-				allwinner,drive = <1>;
+				allwinner,drive = <0>;
 				allwinner,pull = <0>;
 			};
 

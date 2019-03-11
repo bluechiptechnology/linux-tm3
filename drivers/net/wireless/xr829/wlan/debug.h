@@ -196,11 +196,13 @@ extern u32 epta_stat_dbg_ctrl;
 #define DGB_XRADIO_QC   1  /*Enable this only in QC test.*/
 #define DGB_XRADIO_HWT  0  /*Only in hardware test with special fw.*/
 #define DBG_XRADIO_HIF  1
+#define DBG_READ_HWINFO	0
 #else
 #define DGB_LOG_FILE    0  /*Don't log more than 500byte once.*/
 #define DGB_XRADIO_QC   0  /*Enable this only in QC test.*/
 #define DGB_XRADIO_HWT  0  /*Only in hardware test with special fw.*/
 #define DBG_XRADIO_HIF  0
+#define DBG_READ_HWINFO	0
 #endif
 
 #if (DBG_XRADIO_HIF)

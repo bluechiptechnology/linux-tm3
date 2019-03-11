@@ -151,6 +151,15 @@ struct dma_buf *ion_share_dma_buf(struct ion_client *client,
 int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle);
 
 /**
+ * @name       :ion_share_dma_buf_fd2
+ * @brief      :same with ion_share_dma_buf_fd except always get fd that
+ *		greater then 2
+ * @client:	the client
+ * @handle:	the handle
+ */
+int ion_share_dma_buf_fd2(struct ion_client *client, struct ion_handle *handle);
+
+/**
  * ion_import_dma_buf() - get ion_handle from dma-buf
  * @client:	the client
  * @dmabuf:	the dma-buf
@@ -191,5 +200,14 @@ struct ion_handle *ion_import_dma_buf_fd(struct ion_client *client, int fd);
  */
 int ion_phys(struct ion_client *client, struct ion_handle *handle,
 	     ion_phys_addr_t *addr, size_t *len);
+
+/**
+ * @name       :ion_set_dmabuf_flag
+ * @brief      :change dma_buf flag
+ * @param[IN]  :flags:flags to be set
+ * @param[IN]  :dma_buf
+ * @return     :0 if success
+ */
+int ion_set_dmabuf_flag(struct dma_buf *buf, unsigned long flags);
 
 #endif /* _LINUX_ION_H */

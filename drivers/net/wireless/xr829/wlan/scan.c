@@ -994,6 +994,8 @@ void xradio_hw_sched_scan_stop(struct xradio_common *hw_priv)
 static void xradio_scan_restart_delayed(struct xradio_vif *priv)
 {
 	struct xradio_common *hw_priv = xrwl_vifpriv_to_hwpriv(priv);
+	struct xradio_vif *tmp_vif = NULL;
+	int i = 0;
 	scan_printk(XRADIO_DBG_TRC, "%s\n", __func__);
 
 	if (priv->delayed_link_loss) {
@@ -1019,9 +1021,14 @@ static void xradio_scan_restart_delayed(struct xradio_vif *priv)
 			"p2p-dev mode after scan");
 	}
 
-	if (atomic_xchg(&priv->delayed_unjoin, 0)) {
-		if (queue_work(hw_priv->workqueue, &priv->unjoin_work) <= 0)
-			wsm_unlock_tx(hw_priv);
+	for (i = 0; i < 2; i++) {
+		tmp_vif = __xrwl_hwpriv_to_vifpriv(hw_priv, i);
+		if (tmp_vif == NULL)
+			continue;
+		if (atomic_xchg(&tmp_vif->delayed_unjoin, 0)) {
+			if (queue_work(hw_priv->workqueue, &tmp_vif->unjoin_work) <= 0)
+				wsm_unlock_tx(hw_priv);
+		}
 	}
 }
 

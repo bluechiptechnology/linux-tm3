@@ -1602,7 +1602,7 @@ void xradio_tx_confirm_cb(struct xradio_common *hw_priv,
 					    "[ROC RESTART ACTIVE ON][Confirm CallBack]");
 				cancel_delayed_work_sync(&hw_priv->rem_chan_timeout);
 				if (atomic_read(&hw_priv->remain_on_channel)) {
-					queue_delayed_work(hw_priv->workqueue,
+					queue_delayed_work(hw_priv->spare_workqueue,
 							   &hw_priv->rem_chan_timeout,
 							   (TES_P2P_0002_roc_time) * HZ / 1000);
 				}

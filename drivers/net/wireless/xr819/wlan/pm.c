@@ -415,7 +415,8 @@ int xradio_wow_suspend(struct ieee80211_hw *hw,
 			   "because of bh_error occurs.\n");
 		return -EBUSY;
 	}
-	WARN_ON(!atomic_read(&hw_priv->num_vifs));
+	if (!atomic_read(&hw_priv->num_vifs))
+		pm_printk(XRADIO_DBG_WARN, "%s num_vifs=0\n", __func__);
 
 #ifdef HW_RESTART
 	if (work_pending(&hw_priv->hw_restart_work)) {
@@ -730,7 +731,9 @@ int xradio_wow_resume(struct ieee80211_hw *hw)
 	pm_printk(XRADIO_DBG_NIY, "%s, Sleeptime=%dms\n", __func__,
 			  xradio_realtime_interval(&suspend_time, &resume_time));
 
-	WARN_ON(!atomic_read(&hw_priv->num_vifs));
+	if (!atomic_read(&hw_priv->num_vifs))
+		pm_printk(XRADIO_DBG_WARN, "%s num_vifs=0\n", __func__);
+
 	if (hw_priv->bh_error) {
 		pm_printk(XRADIO_DBG_ERROR, "%s bh_error(%d) occurs already.\n",
 				__func__, hw_priv->bh_error);
@@ -884,6 +887,7 @@ static int xradio_poweroff_suspend(struct xradio_common *hw_priv)
 	/* Flush all works. */
 	cancel_work_sync(&hw_priv->query_work);
 	flush_workqueue(hw_priv->workqueue);
+	flush_workqueue(hw_priv->spare_workqueue);
 
 	/* Schedule hardware restart, ensure no cmds in progress.*/
 	down(&hw_priv->wsm_cmd_sema);

@@ -245,7 +245,7 @@ int ths_driver_startup(struct sunxi_ths_data *ths_data,
 
 	if (of_property_read_u32(np, "shut_temp", &ths_data->shut_temp)) {
 		pr_err("%s: get int temp failed\n", __func__);
-		ths_data->shut_temp = 120;
+		ths_data->shut_temp = 120000;
 	}
 
 	thsprintk("ths have parent clk: %d, thermal version is: %d !\n",
@@ -389,8 +389,16 @@ int ths_driver_get_temp(struct sunxi_ths_data *ths_data, int id)
 #ifdef CONFIG_ARCH_SUN8IW7
 	t = t + CALIBRATION_DEVIATION;
 #endif
+	/* Change temperature unit from celsius to millicelsius */
+	t = t * 1000;
 
-	thsprintk("THS data[%d] = 0x%x, temp is %d\n",
+	if (t >= ths_data->shut_temp)
+		pr_emerg("ths data[%d] =0x%x,temp is %dmillicelsius\n",
+			id,
+			reg_data,
+			t);
+
+	thsprintk("THS data[%d] = 0x%x, temp is %d millicelsius\n",
 			id,
 			reg_data,
 			t);
@@ -611,7 +619,8 @@ static void ths_driver_init_old_shut_reg(struct sunxi_ths_data *ths_data,
 	int i;
 
 	for (i = 0; i < ths_data->sensor_cnt; i++) {
-		reg_value = ths_driver_temp_to_reg(ths_data->shut_temp, i, cpara);
+		reg_value = ths_driver_temp_to_reg(ths_data->shut_temp/1000,
+						i, cpara);
 		reg_value = (reg_value << 16);
 		writel(reg_value, ths_data->base_addr + reg->offset + i * 4);
 	}
@@ -626,7 +635,8 @@ static void ths_driver_init_new_shut_reg(struct sunxi_ths_data *ths_data,
 
 	for (i = 0, calcu_times = 0; i < ths_data->sensor_cnt; i++) {
 		reg_value_store =
-			ths_driver_temp_to_reg(ths_data->shut_temp, i, cpara);
+			ths_driver_temp_to_reg(ths_data->shut_temp/1000,
+						i, cpara);
 
 		/**
 		 * calcu_times is used to distinguish the operation

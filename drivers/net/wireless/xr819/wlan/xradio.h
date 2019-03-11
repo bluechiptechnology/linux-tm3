@@ -113,7 +113,8 @@
 
 #define XRADIO_PLAT_DEVICE   "xradio_device"
 #define XRADIO_WORKQUEUE   "xradio_wq"
-#define WIFI_CONF_PATH    "/data/xr_wifi.conf"
+#define XRADIO_SPARE_WORKQUEUE   "xradio_spare_wq"
+#define WIFI_CONF_PATH    "/data/vendor/wifi/xr_wifi.conf"
 
 extern char *drv_version;
 extern char *drv_buildtime;
@@ -234,6 +235,11 @@ struct xradio_common {
 
 	struct semaphore		conf_lock;
 
+	/* some works can not push into a same workqueue, so create a
+	 * spare workqueue to separate them.
+	 */
+	struct workqueue_struct 	*spare_workqueue;
+
 	const struct sbus_ops		*sbus_ops;
 	struct sbus_priv		*sbus_priv;
 	int 			driver_ready;
@@ -319,6 +325,7 @@ struct xradio_common {
 	 * FW issue with sleeping/waking up. */
 	atomic_t            recent_scan;
 	atomic_t            suspend_state;
+	wait_queue_head_t		wsm_wakeup_done;
 #ifdef HW_RESTART
 	bool                exit_sync;
 	int			hw_restart_work_running;

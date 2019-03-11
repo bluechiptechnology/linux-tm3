@@ -2647,10 +2647,13 @@ int mmc_hw_reset(struct mmc_host *host)
 	ret = host->bus_ops->reset(host);
 	mmc_bus_put(host);
 
-	if (ret)
+	if (ret) {
 		pr_warn("%s: tried to reset card, got error %d\n",
 			mmc_hostname(host), ret);
-
+		pr_warn("%s: tried to re detect card\n",
+			mmc_hostname(host));
+		_mmc_detect_change(host, 0, false);
+	}
 	return ret;
 }
 EXPORT_SYMBOL(mmc_hw_reset);

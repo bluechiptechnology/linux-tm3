@@ -2625,6 +2625,22 @@ void mac80211_free_hw(struct ieee80211_hw *hw);
  */
 void mac80211_restart_hw(struct ieee80211_hw *hw);
 
+/** mac80211_napi_schedule - schedule NAPI poll
+ *
+ * Use this function to schedule NAPI polling on a device.
+ *
+ * @hw: the hardware to start polling
+ */
+void mac80211_napi_schedule(struct ieee80211_hw *hw);
+
+/** mac80211_napi_complete - complete NAPI polling
+ *
+ * Use this function to finish NAPI polling on a device.
+ *
+ * @hw: the hardware to stop polling
+ */
+void mac80211_napi_complete(struct ieee80211_hw *hw);
+
 /**
  * ieee80211_rx - receive frame
  *

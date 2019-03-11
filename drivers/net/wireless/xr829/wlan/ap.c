@@ -632,7 +632,7 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
 				if (ret)
 					priv->powersave_mode = pm;
 			} else {
-				priv->powersave_mode.pmMode = WSM_PSM_FAST_PS;
+				ap_printk(XRADIO_DBG_WARN, "arp_addr_cnt not clear at disconnecting,filter abnormal enable!!!\n");
 			}
 			priv->power_set_true = 0;
 			priv->user_power_set_true = 0;
@@ -727,29 +727,33 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
 	}
 #endif /*IPV6_FILTERING */
 
-	if (changed & BSS_CHANGED_BEACON) {
-		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON\n");
-#ifdef HIDDEN_SSID
-		if (priv->join_status != XRADIO_JOIN_STATUS_AP) {
-			priv->hidden_ssid = info->hidden_ssid;
-			priv->ssid_length = info->ssid_len;
-			ap_printk(XRADIO_DBG_NIY, "hidden_ssid=%d, ssid_len=%zu\n",
-				  info->hidden_ssid, info->ssid_len);
-			if (info->ssid_len) {
-				memcpy(priv->ssid, info->ssid, info->ssid_len);
-				ap_printk(XRADIO_DBG_NIY, "ssid=%s\n", info->ssid);
-			}
-		} else
-			ap_printk(XRADIO_DBG_NIY, "priv->join_status=%d\n",
-				  priv->join_status);
-#endif
-		SYS_WARN(xradio_upload_beacon(priv));
-		SYS_WARN(xradio_update_beaconing(priv));
+	if (changed & BSS_CHANGED_BEACON_ENABLED) {
+		priv->enable_beacon = info->enable_beacon;
+		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON_ENABLED %s\n",
+			priv->enable_beacon ? "enable" : "disable");
 	}
 
-	if (changed & BSS_CHANGED_BEACON_ENABLED) {
-		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON_ENABLED dummy\n");
-		priv->enable_beacon = info->enable_beacon;
+	if (changed & BSS_CHANGED_BEACON) {
+		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON(enable=%d)\n",
+			priv->enable_beacon);
+		if (priv->enable_beacon) {
+#ifdef HIDDEN_SSID
+			if (priv->join_status != XRADIO_JOIN_STATUS_AP) {
+				priv->hidden_ssid = info->hidden_ssid;
+				priv->ssid_length = info->ssid_len;
+				ap_printk(XRADIO_DBG_NIY, "hidden_ssid=%d, ssid_len=%zu\n",
+					  info->hidden_ssid, info->ssid_len);
+				if (info->ssid_len) {
+					memcpy(priv->ssid, info->ssid, info->ssid_len);
+					ap_printk(XRADIO_DBG_NIY, "ssid=%s\n", info->ssid);
+				}
+			} else
+				ap_printk(XRADIO_DBG_NIY, "priv->join_status=%d\n",
+					  priv->join_status);
+#endif
+			SYS_WARN(xradio_upload_beacon(priv));
+			SYS_WARN(xradio_update_beaconing(priv));
+		}
 	}
 
 	if (changed & BSS_CHANGED_BEACON_INT) {

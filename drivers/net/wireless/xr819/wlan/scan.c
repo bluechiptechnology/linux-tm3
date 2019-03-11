@@ -910,6 +910,8 @@ void xradio_hw_sched_scan_stop(struct xradio_common *hw_priv)
 static void xradio_scan_restart_delayed(struct xradio_vif *priv)
 {
 	struct xradio_common *hw_priv = xrwl_vifpriv_to_hwpriv(priv);
+	struct xradio_vif *tmp_vif = NULL;
+	int i = 0;
 	scan_printk(XRADIO_DBG_TRC, "%s\n", __func__);
 
 	if (priv->delayed_link_loss) {
@@ -935,9 +937,14 @@ static void xradio_scan_restart_delayed(struct xradio_vif *priv)
 			"p2p-dev mode after scan");
 	}
 
-	if (atomic_xchg(&priv->delayed_unjoin, 0)) {
-		if (queue_work(hw_priv->workqueue, &priv->unjoin_work) <= 0)
-			wsm_unlock_tx(hw_priv);
+	for (i = 0; i < 2; i++) {
+		tmp_vif = __xrwl_hwpriv_to_vifpriv(hw_priv, i);
+		if (tmp_vif == NULL)
+			continue;
+		if (atomic_xchg(&tmp_vif->delayed_unjoin, 0)) {
+			if (queue_work(hw_priv->workqueue, &tmp_vif->unjoin_work) <= 0)
+				wsm_unlock_tx(hw_priv);
+		}
 	}
 }
 
@@ -990,23 +997,18 @@ void xradio_scan_complete_cb(struct xradio_common *hw_priv,
 	}
 	spin_unlock(&priv->vif_lock);
 
-	/*
-	if(hw_priv->scan.status == -ETIMEDOUT)
+	down(&hw_priv->scan.status_lock);
+	if (hw_priv->scan.status == -ETIMEDOUT) {
+		up(&hw_priv->scan.status_lock);
 		scan_printk(XRADIO_DBG_WARN, "Scan timeout already occured. "
 			"Don't cancel work");
-	if ((hw_priv->scan.status != -ETIMEDOUT) &&
-		(cancel_delayed_work_sync(&hw_priv->scan.timeout) > 0)) {
-		hw_priv->scan.status = 1;
-		queue_delayed_work(hw_priv->workqueue, &hw_priv->scan.timeout, 0);
-	}
-	should not involve status as a condition*/
-
-	if (cancel_delayed_work_sync(&hw_priv->scan.timeout) > 0) {
-		down(&hw_priv->scan.status_lock);
+	} else {
 		hw_priv->scan.status = 1;
 		up(&hw_priv->scan.status_lock);
-		schedule_delayed_work(&hw_priv->scan.timeout, 0);
+		if (cancel_delayed_work_sync(&hw_priv->scan.timeout) > 0)
+			schedule_delayed_work(&hw_priv->scan.timeout, 0);
 	}
+
 }
 
 void xradio_scan_timeout(struct work_struct *work)
@@ -1016,8 +1018,10 @@ void xradio_scan_timeout(struct work_struct *work)
 	scan_printk(XRADIO_DBG_TRC, "%s\n", __func__);
 
 	if (likely(atomic_xchg(&hw_priv->scan.in_progress, 0))) {
+		down(&hw_priv->scan.status_lock);
 		if (hw_priv->scan.status > 0) {
 			hw_priv->scan.status = 0;
+			up(&hw_priv->scan.status_lock);
 #ifdef SCAN_FAILED_WORKAROUND_OF_FW_EXCEPTION
 			hw_priv->scan.scan_failed_cnt = 0;
 #endif
@@ -1032,6 +1036,7 @@ void xradio_scan_timeout(struct work_struct *work)
 			}
 #endif
 			hw_priv->scan.status = -ETIMEDOUT;
+			up(&hw_priv->scan.status_lock);
 			hw_priv->scan.curr   = hw_priv->scan.end;
 			WARN_ON(wsm_stop_scan(hw_priv, hw_priv->scan.if_id ? 1 : 0));
 		}

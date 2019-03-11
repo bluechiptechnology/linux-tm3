@@ -14,7 +14,6 @@
 #include <linux/platform_device.h>
 #include <linux/sunxi-gpio.h>
 #include <linux/etherdevice.h>
-#include <linux/crypto.h>
 #include <linux/miscdevice.h>
 #include <linux/capability.h>
 
@@ -290,93 +289,6 @@ static struct miscdevice sunxi_wlan_dev = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name  = "sunxi-wlan",
 };
-
-static char wifi_mac_str[18] = {0};
-
-void sunxi_wlan_chipid_mac_address(u8 *mac)
-{
-#define MD5_SIZE	16
-#define CHIP_SIZE	16
-
-	struct crypto_hash *tfm;
-	struct hash_desc desc;
-	struct scatterlist sg;
-	u8 result[MD5_SIZE];
-	u8 chipid[CHIP_SIZE];
-	int i = 0;
-	int ret = -1;
-
-	memset(chipid, 0, sizeof(chipid));
-	memset(result, 0, sizeof(result));
-
-	sunxi_get_soc_chipid((u8 *)chipid);
-
-	tfm = crypto_alloc_hash("md5", 0, CRYPTO_ALG_ASYNC);
-	if (IS_ERR(tfm)) {
-		pr_err("Failed to alloc md5\n");
-		return;
-	}
-	desc.tfm = tfm;
-	desc.flags = 0;
-
-	ret = crypto_hash_init(&desc);
-	if (ret < 0) {
-		pr_err("crypto_hash_init() failed\n");
-		goto out;
-	}
-
-	sg_init_one(&sg, chipid, sizeof(chipid) - 1);
-	ret = crypto_hash_update(&desc, &sg, sizeof(chipid) - 1);
-	if (ret < 0) {
-		pr_err("crypto_hash_update() failed for id\n");
-		goto out;
-	}
-
-	crypto_hash_final(&desc, result);
-	if (ret < 0) {
-		pr_err("crypto_hash_final() failed for result\n");
-		goto out;
-	}
-
-	/* Choose md5 result's [0][2][4][6][8][10] byte as mac address */
-	for (i = 0; i < 6; i++)
-		mac[i] = result[2*i];
-	mac[0] &= 0xfe;     /* clear multicast bit */
-	mac[0] &= 0xfd;     /* clear local assignment bit (IEEE802) */
-
-out:
-	crypto_free_hash(tfm);
-}
-EXPORT_SYMBOL(sunxi_wlan_chipid_mac_address);
-
-void sunxi_wlan_custom_mac_address(u8 *mac)
-{
-	int i;
-	char *p = wifi_mac_str;
-	u8 mac_addr[ETH_ALEN] = {0};
-
-	if (0 == strlen(p))
-		return;
-
-	for (i = 0; i < ETH_ALEN; i++, p++)
-		mac_addr[i] = simple_strtoul(p, &p, 16);
-
-	memcpy(mac, mac_addr, sizeof(mac_addr));
-}
-EXPORT_SYMBOL(sunxi_wlan_custom_mac_address);
-
-#ifndef MODULE
-static int __init set_wlan_mac_addr(char *str)
-{
-	char *p = str;
-
-	if (str != NULL && *str)
-		strlcpy(wifi_mac_str, p, 18);
-
-	return 0;
-}
-__setup("wifi_mac=", set_wlan_mac_addr);
-#endif
 
 static int sunxi_wlan_probe(struct platform_device *pdev)
 {

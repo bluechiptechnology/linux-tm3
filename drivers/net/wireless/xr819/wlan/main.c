@@ -415,9 +415,11 @@ static int xradio_macaddr_char2val(u8 *v_mac, const char *c_mac)
  a[4] != 0 || a[5] != 0) && \
  !(a[0] & 0x3))
 
+extern int get_wifi_custom_mac_address(char *addr_str);
 static void xradio_get_mac_addrs(u8 *macaddr)
 {
 	int ret = 0;
+	char addr_str[20];
 	SYS_BUG(!macaddr);
 	/* Check mac addrs param, if exsist, use it first.*/
 #ifdef XRADIO_MACPARAM_HEX
@@ -427,6 +429,15 @@ static void xradio_get_mac_addrs(u8 *macaddr)
 		ret = xradio_macaddr_char2val(macaddr, xradio_macaddr_param);
 	}
 #endif
+
+	if (ret < 0 || !MACADDR_VAILID(macaddr)) {
+		ret = get_wifi_custom_mac_address(addr_str);
+		if (ret != -1) {
+			sscanf(addr_str, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+							&macaddr[0], &macaddr[1], &macaddr[2],
+							&macaddr[3], &macaddr[4], &macaddr[5]);
+		}
+	}
 
 	/* Use random value to set mac addr for the first time,
 	 * and save it in  wifi config file. TODO: read from product ID*/
@@ -728,6 +739,7 @@ struct ieee80211_hw *xradio_init_common(size_t hw_priv_data_len)
 	sema_init(&hw_priv->dtor_lock, 1);
 
 	hw_priv->workqueue = create_singlethread_workqueue(XRADIO_WORKQUEUE);
+	hw_priv->spare_workqueue = create_singlethread_workqueue(XRADIO_SPARE_WORKQUEUE);
 	sema_init(&hw_priv->scan.lock, 1);
 	sema_init(&hw_priv->scan.status_lock, 1);
 	INIT_WORK(&hw_priv->scan.work, xradio_scan_work);
@@ -772,6 +784,7 @@ struct ieee80211_hw *xradio_init_common(size_t hw_priv_data_len)
 
 	init_waitqueue_head(&hw_priv->channel_switch_done);
 	init_waitqueue_head(&hw_priv->wsm_cmd_wq);
+	init_waitqueue_head(&hw_priv->wsm_wakeup_done);
 	init_waitqueue_head(&hw_priv->wsm_startup_done);
 	init_waitqueue_head(&hw_priv->offchannel_wq);
 	hw_priv->wsm_caps.firmwareReady = 0;
@@ -850,6 +863,9 @@ void xradio_free_common(struct ieee80211_hw *dev)
 	flush_workqueue(hw_priv->workqueue);
 	destroy_workqueue(hw_priv->workqueue);
 	hw_priv->workqueue = NULL;
+	flush_workqueue(hw_priv->spare_workqueue);
+	destroy_workqueue(hw_priv->spare_workqueue);
+	hw_priv->spare_workqueue = NULL;
 
 	xradio_deinit_resv_skb(hw_priv);
 	if (hw_priv->skb_cache) {
@@ -1039,6 +1055,7 @@ int xradio_core_reinit(struct xradio_common *hw_priv)
 #ifdef CONFIG_PM
 	atomic_set(&hw_priv->suspend_state, XRADIO_RESUME);
 #endif
+	wake_up(&hw_priv->wsm_wakeup_done);
 
 	/* Set device mode parameter. */
 	for (i = 0; i < xrwl_get_nr_hw_ifaces(hw_priv); i++) {

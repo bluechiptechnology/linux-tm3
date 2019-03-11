@@ -321,7 +321,6 @@ static int sdio_suspend(struct device *dev)
 static int sdio_suspend(struct device *dev)
 {
 	int ret = 0;
-
 	sbus_printk(XRADIO_DBG_NIY, "%s\n", __func__);
 #ifdef CONFIG_XRADIO_ETF
 	ret = xradio_etf_suspend();
@@ -336,7 +335,7 @@ static int sdio_suspend(struct device *dev)
 		sbus_printk(XRADIO_DBG_ERROR, "xradio_etf_suspend failed\n");
 	}
 #else
-	func = (struct sdio_func *)dev_to_sdio_func(dev);
+	struct sdio_func *func = dev_to_sdio_func(dev);
 	ret = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
 	if (ret) {
 		sbus_printk(XRADIO_DBG_ERROR, "set MMC_PM_KEEP_POWER error\n");

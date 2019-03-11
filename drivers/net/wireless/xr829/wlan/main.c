@@ -20,6 +20,8 @@
 #include <linux/sched.h>
 #include <net/mac80211.h>
 #include <linux/platform_device.h>
+#include <linux/mutex.h>
+#include <linux/proc_fs.h>
 
 #include "platform.h"
 #include "xradio.h"
@@ -39,7 +41,7 @@ MODULE_DESCRIPTION("XRadioTech WLAN driver core");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("xradio_core");
 
-#define XRADIO_DEV_VER  "_HT40_01.30"
+#define XRADIO_DEV_VER  "_HT40_01.31"
 
 char *drv_version   = XRADIO_VERSION XRADIO_DEV_VER;
 char *drv_buildtime = __DATE__" "__TIME__;
@@ -61,6 +63,14 @@ MODULE_PARM_DESC(macaddr, "First MAC address");
 #ifdef HW_RESTART
 void xradio_restart_work(struct work_struct *work);
 #endif
+
+static struct proc_dir_entry *hwinfo_proc_dir;
+static struct proc_dir_entry *hwinfo_proc_node;
+
+#define HWINFO_SIZE (4 * 64)
+static u8 *hwinfo_buffer;
+static DEFINE_MUTEX(hwinfo_buffer_lock);
+static int update_hwinfo_buffer(struct xradio_common *hw_priv);
 
 /* TODO: use rates and channels from the device */
 #define RATETAB_ENT(_rate, _rateid, _flags)		\
@@ -462,9 +472,12 @@ static int xradio_macaddr_char2val(u8 *v_mac, const char *c_mac)
  a[4] != 0 || a[5] != 0) && \
  !(a[0] & 0x3))
 
+extern int get_wifi_custom_mac_address(char *addr_str);
+
 static void xradio_get_mac_addrs(u8 *macaddr)
 {
 	int ret = 0;
+	char addr_str[20];
 	SYS_BUG(!macaddr);
 	/* Check mac addrs param, if exsist, use it first.*/
 #ifdef XRADIO_MACPARAM_HEX
@@ -474,6 +487,15 @@ static void xradio_get_mac_addrs(u8 *macaddr)
 		ret = xradio_macaddr_char2val(macaddr, xradio_macaddr_param);
 	}
 #endif
+
+	if (ret < 0 || !MACADDR_VAILID(macaddr)) {
+		ret = get_wifi_custom_mac_address(addr_str);
+		if (ret != -1) {
+			sscanf(addr_str, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+							&macaddr[0], &macaddr[1], &macaddr[2],
+							&macaddr[3], &macaddr[4], &macaddr[5]);
+		}
+	}
 
 	/* Use random value to set mac addr for the first time,
 	 * and save it in  wifi config file. TODO: read from product ID*/
@@ -824,6 +846,7 @@ struct ieee80211_hw *xradio_init_common(size_t hw_priv_data_len)
 
 	init_waitqueue_head(&hw_priv->channel_switch_done);
 	init_waitqueue_head(&hw_priv->wsm_cmd_wq);
+	init_waitqueue_head(&hw_priv->wsm_wakeup_done);
 	init_waitqueue_head(&hw_priv->wsm_startup_done);
 	init_waitqueue_head(&hw_priv->offchannel_wq);
 	hw_priv->wsm_caps.firmwareReady = 0;
@@ -1167,6 +1190,7 @@ restart:
 	 */
 	hw_priv->hw_restart = false;
 	atomic_set(&hw_priv->suspend_state, XRADIO_RESUME);
+	wake_up(&hw_priv->wsm_wakeup_done);
 
 	/* Set device mode parameter. */
 	for (i = 0; i < xrwl_get_nr_hw_ifaces(hw_priv); i++) {
@@ -1366,6 +1390,8 @@ start:
 	}
 	xradio_dbg(XRADIO_DBG_ALWY, "Firmware Startup Done.\n");
 
+	update_hwinfo_buffer(hw_priv);
+
 	/* Keep device wake up. */
 	err = xradio_reg_bit_operate(hw_priv, HIF_CONTROL_REG_ID, HIF_CTRL_WUP_BIT, 0);
 	if (err) {
@@ -1475,6 +1501,101 @@ void xradio_core_deinit(void)
 }
 EXPORT_SYMBOL_GPL(xradio_core_deinit);
 
+static int hwinfo_proc_show(struct seq_file *m, void *v)
+{
+	char *buf;
+	size_t hwinfo_size = HWINFO_SIZE;
+	size_t size;
+
+	if (hwinfo_buffer == NULL)
+		return 0;
+
+	size = seq_get_buf(m, &buf);
+
+	/* single_ can only show once */
+	if (unlikely(hwinfo_size >= size)) {
+		/* if buffer is not enough, seq will double it and try again */
+		xradio_dbg(XRADIO_DBG_WARN, "hwinfo file size is over than seq buffer, try expand and try again\n");
+		/* set seq overflowed like seq_set_overflow() */
+		seq_commit(m, size);
+		goto out;
+	}
+
+	mutex_lock(&hwinfo_buffer_lock);
+	memcpy(buf, hwinfo_buffer, hwinfo_size);
+	mutex_unlock(&hwinfo_buffer_lock);
+	seq_commit(m, hwinfo_size);
+
+out:
+	return 0;
+}
+
+static int try_create_hwinfo_buffer(void)
+{
+	u32 hw_arry[64] = {0};
+
+	int ret1 = access_file(XRADIO_HWINFO_FILE, (char *)hw_arry, sizeof(hw_arry), 1);
+	if (ret1 < 0) {
+		xradio_dbg(XRADIO_DBG_ERROR, "<%s : %d>read hwinfo file:%s failed!\n", __func__, __LINE__, XRADIO_HWINFO_FILE);
+		return -1;
+	} else {
+	#if	(DBG_READ_HWINFO)
+		print_hex_dump_bytes("wlan core read hwinfo:", DUMP_PREFIX_OFFSET, (char *)hw_arry, sizeof(hw_arry));
+	#endif
+
+		mutex_lock(&hwinfo_buffer_lock);
+		hwinfo_buffer = kmalloc(sizeof(hw_arry), GFP_KERNEL);
+		if (unlikely(hwinfo_buffer == NULL))
+			xradio_dbg(XRADIO_DBG_ERROR, "no memory for hwinfo");
+		else
+			memcpy(hwinfo_buffer, hw_arry, sizeof(hw_arry));
+		mutex_unlock(&hwinfo_buffer_lock);
+	}
+	return 0;
+}
+
+static int update_hwinfo_buffer(struct xradio_common *hw_priv)
+{
+	/* check whether efues data is write to file already*/
+	u32 hw_arry[64] = { 0 };
+
+	xradio_dbg(XRADIO_DBG_MSG, "***** read hwinfo value from fw *******.\n");
+	wsm_read_mib(hw_priv, WSM_MIB_ID_HW_INFO, (void *)&hw_arry, sizeof(hw_arry), 4);
+#if (DBG_READ_HWINFO)
+	print_hex_dump_bytes("wlan driver read hwinfo:", DUMP_PREFIX_OFFSET, (char *)hw_arry, sizeof(hw_arry));
+#endif
+
+	if ((!hwinfo_buffer) || (memcmp(hwinfo_buffer, hw_arry, sizeof(hw_arry)))) {
+		/* reload/load file and buffer */
+		int ret = access_file(XRADIO_HWINFO_FILE, (char *)hw_arry, sizeof(hw_arry), 0);
+		if (ret < 0)
+			xradio_dbg(XRADIO_DBG_ERROR, "Write hwinfo data to file:%s failed!\n", XRADIO_HWINFO_FILE);
+
+		mutex_lock(&hwinfo_buffer_lock);
+		if (!hwinfo_buffer)
+			hwinfo_buffer = kmalloc(sizeof(hw_arry), GFP_KERNEL);
+		if (unlikely(hwinfo_buffer == NULL))
+			xradio_dbg(XRADIO_DBG_ERROR, "no memory for hwinfo");
+		else
+			memcpy(hwinfo_buffer, hw_arry, sizeof(hw_arry));
+		mutex_unlock(&hwinfo_buffer_lock);
+	}
+	return 0;
+}
+
+int hwinfo_proc_open(struct inode *p_inode, struct file *p_file)
+{
+	return single_open(p_file, hwinfo_proc_show, NULL);
+}
+
+static struct file_operations hwinfo_proc_op = {
+	.owner		= THIS_MODULE,
+	.open		= hwinfo_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 /* Init Module function -> Called by insmod */
 static int __init xradio_core_entry(void)
 {
@@ -1500,12 +1621,26 @@ static int __init xradio_core_entry(void)
 		return ret;
 	}
 #endif
+
+	try_create_hwinfo_buffer();
+
+	hwinfo_proc_dir = proc_mkdir("xradio", NULL);
+	hwinfo_proc_node = proc_create("hwinfo", 0644, hwinfo_proc_dir, &hwinfo_proc_op);
+
 	return 0;
 }
 
 /* Called at Driver Unloading */
 static void __exit xradio_core_exit(void)
 {
+	remove_proc_entry("hwinfo", hwinfo_proc_dir);
+	remove_proc_entry("xradio", NULL);
+
+	if (hwinfo_buffer) {
+		kfree(hwinfo_buffer);
+		hwinfo_buffer = NULL;
+	}
+
 #ifdef CONFIG_XRADIO_ETF
 	xradio_etf_deinit();
 #endif

@@ -331,6 +331,7 @@
 			   <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 			   <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
 		clock-frequency = <24000000>;
+		arm,no-tick-in-suspend;
 	};
 
 	pmu {
@@ -355,42 +356,49 @@
 				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp01 {
 				opp-hz = /bits/ 64 <720000000>;
 				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp02 {
 				opp-hz = /bits/ 64 <816000000>;
 				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp03 {
 				opp-hz = /bits/ 64 <888000000>;
 				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp04 {
 				opp-hz = /bits/ 64 <1080000000>;
 				opp-microvolt = <940000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3100>;
 			};
 			opp05 {
 				opp-hz = /bits/ 64 <1320000000>;
 				opp-microvolt = <1000000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3650>;
 			};
 			opp06 {
 				opp-hz = /bits/ 64 <1488000000>;
 				opp-microvolt = <1060000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3950>;
 			};
 		};
 
@@ -404,42 +412,49 @@
 				opp-microvolt = <820000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp01 {
 				opp-hz = /bits/ 64 <720000000>;
 				opp-microvolt = <820000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp02 {
 				opp-hz = /bits/ 64 <816000000>;
 				opp-microvolt = <820000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp03 {
 				opp-hz = /bits/ 64 <888000000>;
 				opp-microvolt = <820000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp04 {
 				opp-hz = /bits/ 64 <1080000000>;
 				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3100>;
 			};
 			opp05 {
 				opp-hz = /bits/ 64 <1320000000>;
 				opp-microvolt = <940000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3650>;
 			};
 			opp06 {
 				opp-hz = /bits/ 64 <1488000000>;
 				opp-microvolt = <1000000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3950>;
 			};
 		};
 
@@ -453,42 +468,49 @@
 				opp-microvolt = <800000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp01 {
 				opp-hz = /bits/ 64 <720000000>;
 				opp-microvolt = <800000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp02 {
 				opp-hz = /bits/ 64 <816000000>;
 				opp-microvolt = <800000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp03 {
 				opp-hz = /bits/ 64 <888000000>;
 				opp-microvolt = <800000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <2800>;
 			};
 			opp04 {
 				opp-hz = /bits/ 64 <1080000000>;
 				opp-microvolt = <840000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3100>;
 			};
 			opp05 {
 				opp-hz = /bits/ 64 <1320000000>;
 				opp-microvolt = <900000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3650>;
 			};
 			opp06 {
 				opp-hz = /bits/ 64 <1488000000>;
 				opp-microvolt = <960000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
+				pval = <3950>;
 			};
 		};
 
@@ -1273,9 +1295,10 @@
 				 <&clk_sdmmc0_bus>,
 				 <&clk_sdmmc0_rst>;
 			clock-names = "osc24m","pll_periph","mmc","ahb","rst";
-			pinctrl-names = "default","sleep";
+			pinctrl-names = "default","sleep" ,"uart_jtag";
 			pinctrl-0 = <&sdc0_pins_a>;
 			pinctrl-1 = <&sdc0_pins_b>;
+			pinctrl-2 = <&sdc0_pins_c>;
 			max-frequency = <50000000>;
 			bus-width = <4>;
 			/*non-removable;*/
@@ -1898,10 +1921,10 @@
 			clocks = <&clk_hosc>,<&clk_ths>;
 			sensor_num = <2>;
 			combine_num = <2>;
-			alarm_low_temp = <105>;
-			alarm_high_temp = <110>;
-			alarm_temp_hysteresis = <15>;
-			shut_temp= <115>;
+			alarm_low_temp = <105000>;
+			alarm_high_temp = <110000>;
+			alarm_temp_hysteresis = <15000>;
+			shut_temp= <115000>;
 			status = "okay";
 
 			ths_combine0:ths_combine0{
@@ -1959,37 +1982,37 @@
 
 				trips{
 					cpu_trip0:t0{
-						temperature = <60>;
+						temperature = <60000>;/*millicelsius */
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip1:t1{
-						temperature = <90>;
+						temperature = <90000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip2:t2{
-						temperature = <95>;
+						temperature = <95000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip3:t3{
-						temperature = <100>;
+						temperature = <100000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip4:t4{
-						temperature = <105>;
+						temperature = <105000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					cpu_trip5:t5{
-						temperature = <110>;
+						temperature = <110000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					crt_trip0:t6{
-						temperature = <115>;
+						temperature = <115000>;
 						type = "critical";
 						hysteresis = <0>;
 					};
@@ -2039,22 +2062,22 @@
 
 				trips{
 					gpu_trip0:t0{
-						temperature = <95>;
+						temperature = <95000>;/*millicelsius */
 						type = "passive";
 						hysteresis = <0>;
 					};
 					gpu_trip1:t1{
-						temperature = <100>;
+						temperature = <100000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					gpu_trip2:t2{
-						temperature = <105>;
+						temperature = <105000>;
 						type = "passive";
 						hysteresis = <0>;
 					};
 					crt_trip1:t3{
-						temperature = <115>;
+						temperature = <115000>;
 						type = "critical";
 						hysteresis = <0>;
 					};

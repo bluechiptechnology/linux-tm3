@@ -17,6 +17,8 @@
 #ifndef _LINUX_ION_SUNXI_H
 #define _LINUX_ION_SUNXI_H
 
+#include "../ion.h"
+
 /**
  * ion_client_create() -  allocate a client and returns it
  * @name:	used for debugging

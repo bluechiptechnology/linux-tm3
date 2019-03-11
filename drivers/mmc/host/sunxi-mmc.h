@@ -42,7 +42,7 @@
 #define __SUNXI_MMC_H__
 
 #define DRIVER_NAME "sunxi-mmc"
-#define DRIVER_RIVISION "v3.11 2018-11-16 9:08"
+#define DRIVER_RIVISION "v3.19 2019-1-16 18:56"
 #define DRIVER_VERSION "SD/MMC/SDIO Host Controller Driver(" DRIVER_RIVISION ")"
 
 #if defined CONFIG_FPGA_V4_PLATFORM || defined CONFIG_FPGA_V7_PLATFORM
@@ -247,6 +247,18 @@ struct sunxi_mmc_ctrl_regs {
 	u32 imask;
 };
 
+struct sunxi_mmc_host_perf{
+	ktime_t start;
+	int64_t rbytes;
+	int64_t wbytes;
+	ktime_t rtime;
+	ktime_t wtime;
+
+	/***use to compute the time no include busy***/
+	int64_t wbytestran;
+	ktime_t wtimetran;
+};
+
 struct sunxi_mmc_host {
 	struct mmc_host *mmc;
 	struct reset_control *reset;
@@ -354,6 +366,9 @@ struct sunxi_mmc_host {
 				      u32 errno, void *other);
 	/*only use for MMC_CAP_NEEDS_POLL and SUNXI_DIS_KER_NAT_CD is on*/
 	u32 present;
+	bool perf_enable;
+	struct device_attribute host_perf;
+	struct sunxi_mmc_host_perf perf;
 
 	void *version_priv_dat;
 
@@ -362,6 +377,9 @@ struct sunxi_mmc_host {
 	bool (*sunxi_mmc_opacmd23)(struct sunxi_mmc_host *host, bool set, u32 arg, u32 *rep);
 	/*sample fifo contral */
 	bool sfc_en;
+
+	/*des phy address shift,use for over 4G phy ddrest*/
+	size_t des_addr_shift;
 };
 
 

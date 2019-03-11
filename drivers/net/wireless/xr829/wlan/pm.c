@@ -415,7 +415,8 @@ int xradio_wow_suspend(struct ieee80211_hw *hw,
 			   "because of bh_error occurs.\n");
 		return -EBUSY;
 	}
-	WARN_ON(!atomic_read(&hw_priv->num_vifs));
+	if (!atomic_read(&hw_priv->num_vifs))
+		pm_printk(XRADIO_DBG_WARN, "%s num_vifs=0\n", __func__);
 
 #ifdef HW_RESTART
 	if (cancel_work_sync(&hw_priv->hw_restart_work)) {
@@ -759,7 +760,9 @@ int xradio_wow_resume(struct ieee80211_hw *hw)
 	pm_printk(XRADIO_DBG_NIY, "%s, Sleeptime=%dms\n", __func__,
 			  xradio_realtime_interval(&suspend_time, &resume_time));
 
-	WARN_ON(!atomic_read(&hw_priv->num_vifs));
+	if (!atomic_read(&hw_priv->num_vifs))
+		pm_printk(XRADIO_DBG_WARN, "%s num_vifs=0\n", __func__);
+
 	if (hw_priv->bh_error) {
 		pm_printk(XRADIO_DBG_ERROR, "%s bh_error(%d) occurs already.\n",
 				__func__, hw_priv->bh_error);

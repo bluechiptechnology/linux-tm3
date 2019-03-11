@@ -141,6 +141,7 @@ int xradio_sta_remove(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		wsm_unlock_tx(hw_priv);
 	spin_unlock_bh(&priv->ps_state_lock);
 	flush_workqueue(hw_priv->workqueue);
+	flush_workqueue(hw_priv->spare_workqueue);
 
 #ifdef AP_AGGREGATE_FW_FIX
 	hw_priv->connected_sta_cnt--;
@@ -646,29 +647,33 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
 	}
 #endif /*IPV6_FILTERING */
 
-	if (changed & BSS_CHANGED_BEACON) {
-		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON\n");
-#ifdef HIDDEN_SSID
-		if (priv->join_status != XRADIO_JOIN_STATUS_AP) {
-			priv->hidden_ssid = info->hidden_ssid;
-			priv->ssid_length = info->ssid_len;
-			ap_printk(XRADIO_DBG_NIY, "hidden_ssid=%d, ssid_len=%zu\n",
-				  info->hidden_ssid, info->ssid_len);
-			if (info->ssid_len) {
-				memcpy(priv->ssid, info->ssid, info->ssid_len);
-				ap_printk(XRADIO_DBG_NIY, "ssid=%s\n", info->ssid);
-			}
-		} else
-			ap_printk(XRADIO_DBG_NIY, "priv->join_status=%d\n",
-				  priv->join_status);
-#endif
-		SYS_WARN(xradio_upload_beacon(priv));
-		SYS_WARN(xradio_update_beaconing(priv));
+	if (changed & BSS_CHANGED_BEACON_ENABLED) {
+		priv->enable_beacon = info->enable_beacon;
+		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON_ENABLED %s\n",
+			priv->enable_beacon ? "enable" : "disable");
 	}
 
-	if (changed & BSS_CHANGED_BEACON_ENABLED) {
-		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON_ENABLED dummy\n");
-		priv->enable_beacon = info->enable_beacon;
+	if (changed & BSS_CHANGED_BEACON) {
+		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_BEACON(enable=%d)\n",
+			priv->enable_beacon);
+		if (priv->enable_beacon) {
+#ifdef HIDDEN_SSID
+			if (priv->join_status != XRADIO_JOIN_STATUS_AP) {
+				priv->hidden_ssid = info->hidden_ssid;
+				priv->ssid_length = info->ssid_len;
+				ap_printk(XRADIO_DBG_NIY, "hidden_ssid=%d, ssid_len=%zu\n",
+					  info->hidden_ssid, info->ssid_len);
+				if (info->ssid_len) {
+					memcpy(priv->ssid, info->ssid, info->ssid_len);
+					ap_printk(XRADIO_DBG_NIY, "ssid=%s\n", info->ssid);
+				}
+			} else
+				ap_printk(XRADIO_DBG_NIY, "priv->join_status=%d\n",
+					  priv->join_status);
+#endif
+			SYS_WARN(xradio_upload_beacon(priv));
+			SYS_WARN(xradio_update_beaconing(priv));
+		}
 	}
 
 	if (changed & BSS_CHANGED_BEACON_INT) {
@@ -702,14 +707,22 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
 		int i;
 		struct xradio_vif *tmp_priv;
 		ap_printk(XRADIO_DBG_NIY, "BSS_CHANGED_ASSOC.\n");
-		if (info->assoc) {	/* TODO: ibss_joined */
+		/*Driver is already do unjoin.*/
+		if (priv->if_id == 0 && priv->vif->type == NL80211_IFTYPE_STATION &&
+			priv->join_status == XRADIO_JOIN_STATUS_PASSIVE) {
+			changed &= ~BSS_CHANGED_ASSOC;
+			ap_printk(XRADIO_DBG_WARN, "BSS_CHANGED_ASSOC but driver is unjoined.\n");
+			mac80211_connection_loss(priv->vif);
+		}
+		/* TODO: ibss_joined */
+		if (info->assoc && priv->join_status != XRADIO_JOIN_STATUS_PASSIVE) {
 			struct ieee80211_sta *sta = NULL;
 			if (info->dtim_period)
 				priv->join_dtim_period = info->dtim_period;
 			priv->beacon_int = info->beacon_int;
 
 			/* Associated: kill join timeout */
-			cancel_delayed_work_sync(&priv->join_timeout);
+			cancel_delayed_work(&priv->join_timeout);
 
 			rcu_read_lock();
 			if (info->bssid)

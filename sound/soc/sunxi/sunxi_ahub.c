@@ -53,7 +53,7 @@ static const struct regmap_config sunxi_ahub_regmap_config = {
 	.reg_stride = 4,
 	.val_bits = 32,
 	.max_register = SUNXI_AHUB_DAM_GAIN_CTL7(1),
-	.cache_type = REGCACHE_RBTREE,
+	.cache_type = REGCACHE_NONE,
 };
 
 unsigned int sunxi_ahub_read(unsigned int reg)

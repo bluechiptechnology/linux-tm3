@@ -72,7 +72,7 @@ static int sunxi_ths_get_temp(struct sunxi_ths_controller *controller, u32 id,
 	if (t == NO_DATA_INTTERUPT)
 		t = sensor_info[id].temp;
 
-	if (-40 > t || 180 < t) {
+	if (THS_MIN_TEMPERATURE > t || THS_MAX_TEMPERATURE < t) {
 		thsprintk("ths driver get unvalid temp!\n");
 		return t;
 	}

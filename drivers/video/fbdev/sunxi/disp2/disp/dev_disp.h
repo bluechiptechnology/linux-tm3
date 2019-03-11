@@ -82,6 +82,27 @@ struct disp_init_para {
 	unsigned int chn_cfg_mode;
 };
 
+struct disp_ion_mgr {
+	struct ion_client *client;
+	struct ion_handle *handle;
+	struct mutex mlock;
+	struct list_head ion_list;
+};
+
+
+struct disp_ion_mem {
+	struct ion_handle *handle;
+	void *vaddr;
+	size_t size;
+	struct dmabuf_item *p_item;
+
+};
+
+struct disp_ion_list_node {
+	struct list_head node;
+	struct disp_ion_mem mem;
+};
+
 struct disp_drv_info {
 	struct device *dev;
 	uintptr_t reg_base[DISP_MOD_NUM];
@@ -105,8 +126,7 @@ struct disp_drv_info {
 	bool inited;		/* indicate driver if init */
 	struct disp_bsp_init_para para;
 #if defined(CONFIG_ION_SUNXI)
-	struct ion_client *client;
-	struct ion_handle *handle;
+	struct disp_ion_mgr ion_mgr;
 #endif
 };
 
@@ -267,5 +287,8 @@ extern s32 disp_vdpo_set_config(struct disp_device *p_vdpo,
 #define DE_MASTOR_ID 0
 extern void sunxi_enable_device_iommu(unsigned int mastor_id, bool flag);
 #endif
+struct disp_ion_mem *disp_ion_malloc(u32 num_bytes, void *phys_addr);
+void disp_ion_free(void *virt_addr, void *phys_addr, u32 num_bytes);
+void disp_ion_flush_cache(void *startAddr, int size);
 
 #endif

@@ -137,7 +137,8 @@
 #define XRADIO_PLAT_DEVICE   "xradio_device"
 #define XRADIO_WORKQUEUE   "xradio_wq"
 #define XRADIO_SPARE_WORKQUEUE   "xradio_spare_wq"
-#define WIFI_CONF_PATH    "/data/misc/wifi/xr_wifi.conf"
+#define WIFI_CONF_PATH    "/data/vendor/wifi/xr_wifi.conf"
+#define XRADIO_HWINFO_FILE  "/data/vendir/wifi/hwinfo.bin"
 
 extern char *drv_version;
 extern char *drv_buildtime;
@@ -355,6 +356,7 @@ struct xradio_common {
 	 * FW issue with sleeping/waking up. */
 	atomic_t            recent_scan;
 	atomic_t            suspend_state;
+	wait_queue_head_t		wsm_wakeup_done;
 #ifdef HW_RESTART
 	bool                exit_sync;
 	int			hw_restart_work_running;
@@ -535,6 +537,7 @@ struct xradio_vif {
 	struct work_struct	join_work;
 	struct delayed_work	join_timeout;
 	struct work_struct	unjoin_work;
+	struct delayed_work	unjoin_delayed_work;
 	struct work_struct	offchannel_work;
 	int			join_dtim_period;
 	atomic_t	delayed_unjoin;

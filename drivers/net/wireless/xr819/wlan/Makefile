@@ -49,6 +49,8 @@ ccflags-y += -DTES_P2P_0002_ROC_RESTART
 ccflags-y += -DTES_P2P_000B_EXTEND_INACTIVITY_CNT
 ccflags-y += -DTES_P2P_000B_DISABLE_EAPOL_FILTER
 
+# Set default Mac Address by custom
+ccflags-y += -DCONFIG_CUSTOM_MAC_ADDRESS
 # Modified for power save.
 #ccflags-y += -DXRADIO_USE_LONG_DTIM_PERIOD
 ccflags-y += -DXRADIO_USE_LONG_KEEP_ALIVE_PERIOD

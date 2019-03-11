@@ -144,6 +144,13 @@ int xradio_start(struct ieee80211_hw *dev)
 		return -ETIMEDOUT;
 	}
 
+	if (wait_event_interruptible_timeout(hw_priv->wsm_wakeup_done,
+				XRADIO_RESUME == atomic_read(&hw_priv->suspend_state), 3*HZ) <= 0) {
+		sta_printk(XRADIO_DBG_ERROR,
+				   "%s:driver is suspending \n", __func__);
+		return -ETIMEDOUT;
+	}
+
 	down(&hw_priv->conf_lock);
 
 #ifdef CONFIG_XRADIO_TESTMODE
@@ -189,6 +196,7 @@ void xradio_stop(struct ieee80211_hw *dev)
 	cancel_delayed_work_sync(&hw_priv->advance_scan_timeout);
 #endif
 	flush_workqueue(hw_priv->workqueue);
+	flush_workqueue(hw_priv->spare_workqueue);
 	del_timer_sync(&hw_priv->ba_timer);
 
 	down(&hw_priv->conf_lock);
@@ -398,11 +406,11 @@ void xradio_remove_interface(struct ieee80211_hw *dev,
 	del_timer_sync(&priv->mcast_timeout);
 
 	down(&hw_priv->scan.lock);
+	if (atomic_xchg(&priv->delayed_unjoin, 0)) {
+		wsm_unlock_tx(hw_priv);
+		sta_printk(XRADIO_DBG_ERROR, "%s:delayed_unjoin exist!\n", __func__);
+	}
 	if (priv->join_status == XRADIO_JOIN_STATUS_STA) {
-		if (atomic_xchg(&priv->delayed_unjoin, 0)) {
-			wsm_unlock_tx(hw_priv);
-			sta_printk(XRADIO_DBG_ERROR, "%s:delayed_unjoin exist!\n", __func__);
-		}
 		cancel_work_sync(&priv->unjoin_work);
 		wsm_lock_tx(hw_priv);
 		xradio_unjoin_work(&priv->unjoin_work);
@@ -499,8 +507,10 @@ void xradio_remove_interface(struct ieee80211_hw *dev,
 	xradio_tx_queues_unlock(hw_priv);
 	up(&hw_priv->conf_lock);
 
-	if (atomic_read(&hw_priv->num_vifs) == 0)
+	if (atomic_read(&hw_priv->num_vifs) == 0) {
 		flush_workqueue(hw_priv->workqueue);
+		flush_workqueue(hw_priv->spare_workqueue);
+	}
 	up(&hw_priv->scan.lock);
 }
 
@@ -1410,7 +1420,7 @@ int xradio_remain_on_channel(struct ieee80211_hw *hw,
 
 	if (!ret) {
 		atomic_set(&hw_priv->remain_on_channel, 1);
-		queue_delayed_work(hw_priv->workqueue, &hw_priv->rem_chan_timeout,
+		queue_delayed_work(hw_priv->spare_workqueue, &hw_priv->rem_chan_timeout,
 				   duration * HZ / 1000);
 		priv->join_status = XRADIO_JOIN_STATUS_MONITOR;
 		mac80211_ready_on_channel(hw);
@@ -1877,7 +1887,7 @@ void xradio_offchannel_work(struct work_struct *work)
 	SYS_BUG(!hw_priv->channel);
 
 	if (unlikely(down_trylock(&hw_priv->scan.lock))) {
-		int ret;
+		int ret = 0;
 		sta_printk(XRADIO_DBG_ERROR,
 			   "xradio_offchannel_work***** drop frame\n");
 #ifdef CONFIG_XRADIO_TESTMODE
@@ -1976,14 +1986,13 @@ void xradio_join_work(struct work_struct *work)
 	SYS_BUG(!wsm);
 	SYS_BUG(!hw_priv->channel);
 
+	cancel_delayed_work_sync(&priv->join_timeout);
 	if (unlikely(priv->join_status)) {
 		sta_printk(XRADIO_DBG_WARN, "%s, pre join_status=%d.\n",
 			  __func__, priv->join_status);
 		wsm_lock_tx(hw_priv);
 		xradio_unjoin_work(&priv->unjoin_work);
 	}
-
-	cancel_delayed_work_sync(&priv->join_timeout);
 
 	bss = cfg80211_get_bss(hw_priv->hw->wiphy, hw_priv->channel,
 			bssid, NULL, 0, IEEE80211_BSS_TYPE_ANY, IEEE80211_PRIVACY_ANY);
@@ -2236,6 +2245,7 @@ void xradio_unjoin_work(struct work_struct *work)
 		memset(&priv->bss_params, 0, sizeof(priv->bss_params));
 		memset(&priv->firmware_ps_mode, 0,
 			sizeof(priv->firmware_ps_mode));
+		priv->powersave_mode.pmMode = WSM_PSM_ACTIVE; /*reset driver pm mode too.*/
 		priv->htcap = false;
 		xradio_for_each_vif(hw_priv, tmp_priv, i) {
 #ifdef P2P_MULTIVIF

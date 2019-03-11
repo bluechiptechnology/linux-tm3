@@ -1735,6 +1735,7 @@ static int wsm_receive_indication(struct xradio_common *hw_priv,
 		    (ieee80211_is_probe_resp(hdr->frame_control) ||
 		    ieee80211_is_beacon(hdr->frame_control))) {
 			spin_unlock(&priv->vif_lock);
+			skb_push(*skb_p, hdr_len);
 			return 0;
 		}
 
@@ -3284,9 +3285,7 @@ static bool wsm_handle_tx_data(struct xradio_vif *priv,
 #if 0
 			wsm->more = 0;
 #endif /* 0 */
-			wsm_lock_tx_async(hw_priv);
-			if (queue_work(hw_priv->workqueue, &priv->unjoin_work) <= 0)
-				wsm_unlock_tx(hw_priv);
+			queue_delayed_work(hw_priv->workqueue, &priv->unjoin_delayed_work, 1 * HZ);
 		}
 	}
 	break;

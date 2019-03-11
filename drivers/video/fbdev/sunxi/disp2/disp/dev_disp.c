@@ -13,6 +13,7 @@
 #if defined(CONFIG_DEVFREQ_DRAM_FREQ_WITH_SOFT_NOTIFY)
 #include <linux/sunxi_dramfreq.h>
 #endif
+#include <linux/ion_sunxi.h>
 
 #ifdef CONFIG_PM
 #define CONFIG_PM_RUNTIME
@@ -1446,6 +1447,240 @@ void disp_free(void *virt_addr, void *phys_addr, u32 num_bytes)
 				  (dma_addr_t)phys_addr);
 }
 
+#if defined(CONFIG_ION_SUNXI)
+static int init_disp_ion_mgr(struct disp_ion_mgr *ion_mgr)
+{
+	if (NULL == ion_mgr) {
+		__wrn("input param is null\n");
+		return -EINVAL;
+	}
+
+	mutex_init(&(ion_mgr->mlock));
+
+	mutex_lock(&(ion_mgr->mlock));
+	INIT_LIST_HEAD(&(ion_mgr->ion_list));
+	ion_mgr->client = sunxi_ion_client_create("ion_disp2");
+	if (IS_ERR_OR_NULL(ion_mgr->client)) {
+		mutex_unlock(&(ion_mgr->mlock));
+		__wrn("disp_ion client create failed!!");
+		return -ENOMEM;
+	} else {
+		__debug("init ion manager for disp ok\n");
+	}
+	mutex_unlock(&(ion_mgr->mlock));
+
+	return 0;
+}
+
+static int __disp_ion_alloc_coherent(struct ion_client *client,
+				     struct disp_ion_mem *mem)
+{
+	unsigned int flags = ION_FLAG_CACHED | ION_FLAG_CACHED_NEEDS_SYNC;
+
+	if (IS_ERR_OR_NULL(client) || (NULL == mem)) {
+		__wrn("input param is null\n");
+		return -1;
+	}
+
+#if defined(CONFIG_SUNXI_IOMMU)
+	mem->handle = ion_alloc(client, mem->size, 0,
+				(1 << ION_HEAP_TYPE_SYSTEM), flags);
+#else
+	mem->handle = ion_alloc(client, mem->size, PAGE_SIZE,
+				 ((1 << ION_HEAP_TYPE_CARVEOUT) |
+				 (1 << ION_HEAP_TYPE_DMA)),
+				flags);
+#endif
+	if (IS_ERR_OR_NULL(mem->handle)) {
+		__wrn("ion_alloc failed, size=%u 0x%p!\n", (unsigned int)mem->size, mem->handle);
+		return -2;
+	}
+	mem->vaddr = ion_map_kernel(client, mem->handle);
+	if (IS_ERR_OR_NULL(mem->vaddr)) {
+		__wrn("ion_map_kernel failed!!\n");
+		goto err_map_kernel;
+	}
+
+	__debug("ion map kernel, vaddr=0x%p\n", mem->vaddr);
+#ifndef CONFIG_SUNXI_IOMMU
+	mem->p_item = kmalloc(sizeof(struct dmabuf_item), GFP_KERNEL);
+	if (ion_phys(client, mem->handle, (ion_phys_addr_t *)&mem->p_item->dma_addr,
+		     &mem->size)) {
+		__wrn("ion_phys failed!!\n");
+		goto err_phys;
+	}
+#endif
+#ifdef CONFIG_SUNXI_IOMMU
+	mem->p_item = disp_dma_map(ion_share_dma_buf_fd2(client, mem->handle));
+	if (!mem->p_item)
+		goto err_phys;
+#else
+	mem->p_item->fd = ion_share_dma_buf_fd2(client, mem->handle);
+	mem->p_item->buf = dma_buf_get(mem->p_item->fd);
+	if (IS_ERR(mem->p_item->buf)) {
+		DE_WRN("Get dmabuf of fd %d fail!\n", mem->p_item->fd);
+		goto err_phys;
+	}
+#endif
+	return 0;
+
+err_phys:
+	ion_unmap_kernel(client, mem->handle);
+err_map_kernel:
+	ion_free(client, mem->handle);
+	return -ENOMEM;
+}
+
+static void __disp_ion_free_coherent(struct ion_client *client,
+				     struct disp_ion_mem *mem)
+{
+	if (IS_ERR_OR_NULL(client) || IS_ERR_OR_NULL(mem->handle) ||
+	    IS_ERR_OR_NULL(mem->vaddr)) {
+		__wrn("input param is null\n");
+		return;
+	}
+
+	mem->p_item->buf->ops->release(mem->p_item->buf);
+	ion_unmap_kernel(client, mem->handle);
+	ion_free(client, mem->handle);
+
+#ifdef CONFIG_SUNXI_IOMMU
+	disp_dma_unmap(mem->p_item);
+#else
+	dma_buf_put(mem->p_item->buf);
+	kfree(mem->p_item);
+#endif
+	return;
+}
+
+void disp_ion_flush_cache(void *startAddr, int size)
+{
+	struct sunxi_cache_range range;
+
+	range.start = (unsigned long)startAddr;
+	range.end = (unsigned long)startAddr + size;
+
+#ifdef CONFIG_ARM64
+	__dma_flush_range((void *)range.start, range.end - range.start);
+#else
+	dmac_flush_range((void *)range.start, (void *)range.end);
+#endif
+}
+
+struct disp_ion_mem *disp_ion_malloc(u32 num_bytes, void *phys_addr)
+{
+	struct disp_ion_mgr *ion_mgr = &(g_disp_drv.ion_mgr);
+	struct ion_client *client = NULL;
+	struct disp_ion_list_node *ion_node = NULL;
+	struct disp_ion_mem *mem = NULL;
+	u32 *paddr = NULL;
+	int ret = -1;
+
+	if (NULL == ion_mgr) {
+		__wrn("disp ion manager has not initial yet\n");
+		return NULL;
+	}
+
+	ion_node = kmalloc(sizeof(struct disp_ion_list_node), GFP_KERNEL);
+	if (NULL == ion_node) {
+		__wrn("fail to alloc ion node, size=%u\n",
+		      (unsigned int)sizeof(struct disp_ion_list_node));
+		return NULL;
+	}
+
+	mutex_lock(&(ion_mgr->mlock));
+	client = ion_mgr->client;
+	mem = &ion_node->mem;
+	mem->size = MY_BYTE_ALIGN(num_bytes);
+	ret = __disp_ion_alloc_coherent(client, mem);
+	if (0 != ret) {
+		__wrn("fail to alloc ion, ret=%d\n", ret);
+		goto err_hdl;
+	}
+
+	paddr = (u32 *)phys_addr;
+	*paddr = (u32)mem->p_item->dma_addr;
+	list_add_tail(&(ion_node->node), &(ion_mgr->ion_list));
+
+	mutex_unlock(&(ion_mgr->mlock));
+
+	return mem;
+
+err_hdl:
+	if (ion_node)
+		kfree(ion_node);
+	mutex_unlock(&(ion_mgr->mlock));
+
+	return NULL;
+}
+
+void disp_ion_free(void *virt_addr, void *phys_addr, u32 num_bytes)
+{
+	struct disp_ion_mgr *ion_mgr = &(g_disp_drv.ion_mgr);
+	struct ion_client *client = NULL;
+	struct disp_ion_list_node *ion_node = NULL, *tmp_ion_node = NULL;
+	struct disp_ion_mem *mem = NULL;
+	bool found = false;
+
+	if (NULL == ion_mgr) {
+		__wrn("disp ion manager has not initial yet\n");
+		return;
+	}
+
+	client = ion_mgr->client;
+
+	mutex_lock(&(ion_mgr->mlock));
+	list_for_each_entry_safe(ion_node, tmp_ion_node, &ion_mgr->ion_list,
+				 node) {
+		if (NULL != ion_node) {
+			mem = &ion_node->mem;
+			if ((((unsigned long)mem->p_item->dma_addr) ==
+			     ((unsigned long)phys_addr)) &&
+			    (((unsigned long)mem->vaddr) ==
+			     ((unsigned long)virt_addr))) {
+				__disp_ion_free_coherent(client, mem);
+				__list_del_entry(&(ion_node->node));
+				found = true;
+				break;
+			}
+		}
+	}
+	mutex_unlock(&(ion_mgr->mlock));
+
+	if (false == found) {
+		__wrn("vaddr=0x%p, paddr=0x%p is not found in ion\n", virt_addr,
+		      phys_addr);
+	}
+}
+
+static void deinit_disp_ion_mgr(struct disp_ion_mgr *ion_mgr)
+{
+	struct disp_ion_list_node *ion_node = NULL, *tmp_ion_node = NULL;
+	struct disp_ion_mem *mem = NULL;
+	struct ion_client *client = NULL;
+
+	if (NULL == ion_mgr) {
+		__wrn("input param is null\n");
+		return;
+	}
+
+	client = ion_mgr->client;
+	mutex_lock(&(ion_mgr->mlock));
+	list_for_each_entry_safe(ion_node, tmp_ion_node, &ion_mgr->ion_list,
+				 node) {
+		if (NULL != ion_node) {
+			// free all ion node
+			mem = &ion_node->mem;
+			__disp_ion_free_coherent(client, mem);
+			__list_del_entry(&(ion_node->node));
+			kfree(ion_node);
+		}
+	}
+	ion_client_destroy(client);
+	mutex_unlock(&(ion_mgr->mlock));
+}
+#endif
+
 s32 disp_set_hdmi_func(struct disp_device_func *func)
 {
 	return bsp_disp_set_hdmi_func(func);
@@ -2354,6 +2589,10 @@ static int disp_probe(struct platform_device *pdev)
 	counter++;
 #endif
 
+#if defined(CONFIG_ION_SUNXI)
+	init_disp_ion_mgr(&g_disp_drv.ion_mgr);
+#endif
+
 	disp_init(pdev);
 	ret = sysfs_create_group(&display_dev->kobj, &disp_attribute_group);
 	if (ret)
@@ -2395,6 +2634,9 @@ static int disp_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 #endif
 	disp_exit();
+#if defined(CONFIG_ION_SUNXI)
+	deinit_disp_ion_mgr(&g_disp_drv.ion_mgr);
+#endif
 	sysfs_remove_group(&display_dev->kobj, &disp_attribute_group);
 	for (i = 0; i < DISP_MOD_NUM; i++) {
 		if (g_disp_drv.mclk[i] && !IS_ERR(g_disp_drv.mclk[i]))

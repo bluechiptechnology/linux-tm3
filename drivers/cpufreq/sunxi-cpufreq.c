@@ -50,6 +50,25 @@ static struct {
 
 /* cpufreq_dvfs_table is global default dvfs table */
 static struct cpufreq_dvfs_table cpufreq_dvfs_table[DVFS_VF_TABLE_MAX] = {
+#ifdef CONFIG_ARM_SUNXI_AVS
+	/* freq         voltage     axi_div pval*/
+	{900000000,     1200,       3,	1300},
+	{600000000,     1200,       3,	1300},
+	{420000000,     1200,       3,	1300},
+	{360000000,     1200,       3,	1300},
+	{300000000,     1200,       3,	1300},
+	{240000000,     1200,       3,	1300},
+	{120000000,     1200,       3,  1300},
+	{60000000,      1200,       3,	1300},
+	{0,             1200,       3,	1300},
+	{0,             1200,       3,	1300},
+	{0,             1200,       3,	1300},
+	{0,             1200,       3,	1300},
+	{0,             1200,       3,	1300},
+	{0,             1200,       3,	1300},
+	{0,             1200,       3,	1300},
+	{0,             1200,       3,	1300},
+#else
 	/*
 	 * cluster0
 	 * cpu0 vdd is 1.20v if cpu freq is (600Mhz, 1008Mhz]
@@ -78,6 +97,7 @@ static struct cpufreq_dvfs_table cpufreq_dvfs_table[DVFS_VF_TABLE_MAX] = {
 	{0,             1200,       3},
 	{0,             1200,       3},
 	{0,             1200,       3}
+#endif
 };
 
 #ifdef CONFIG_ARM_SUNXI_PSENSOR_BIN
@@ -258,6 +278,10 @@ static int sunxi_cpufreq_set_vf(struct cpufreq_frequency_table *table,
 		cpufreq_dvfs_table[num].freq = dev_pm_opp_get_freq(opp);
 		cpufreq_dvfs_table[num].axi_div =
 				dev_pm_opp_axi_bus_divide_ratio(opp);
+#ifdef CONFIG_ARM_SUNXI_AVS
+		cpufreq_dvfs_table[num].pval =
+				dev_pm_opp_get_pval(opp);
+#endif
 		rcu_read_unlock();
 		CPUFREQ_DBG("num:%d, volatge:%d, freq:%d, axi_div:%d ,%s\n",
 				num, cpufreq_dvfs_table[num].voltage,

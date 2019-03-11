@@ -114,7 +114,7 @@
 /*Sunxi MMC Host Controller Version*/
 #define SMHC_VERSION_V4P7	0x40700
 #define SMHC_VERSION_V4P9	0x40900
-
+#define SMHC_VERSION_V4P9P1	0x40901
 
 #ifdef CONFIG_SUNXI_EMCE
 extern int sunxi_emce_set_task_des(int data_len, int bypass);
@@ -833,6 +833,10 @@ void sunxi_mmc_init_priv_v4p6x(struct sunxi_mmc_host *host,
 		host->sunxi_mmc_opacmd23 = sunxi_mmc_opacmd23_v4p9;
 		host->sfc_en = false;
 	}
+	if (mmc_readl(host, REG_SMCV) >= SMHC_VERSION_V4P9P1) {
+		host->des_addr_shift = 2;
+	}
+
 
 	host->sunxi_mmc_oclk_en = sunxi_mmc_oclk_onoff;
 }

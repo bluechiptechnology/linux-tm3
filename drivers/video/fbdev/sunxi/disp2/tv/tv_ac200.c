@@ -156,6 +156,10 @@ s32 tv_detect_thread(void *parg)
 
 s32 tv_detect_enable(void)
 {
+	if (tv_hpd_task != NULL) {
+		pr_info("tv_detect alread enable\n");
+		return 0;
+	}
 	tv_hpd_task = kthread_create(tv_detect_thread, (void *)0, "tve detect");
 	if (IS_ERR_OR_NULL(tv_hpd_task)) {
 		s32 err = 0;
@@ -163,6 +167,8 @@ s32 tv_detect_enable(void)
 		err = PTR_ERR(tv_hpd_task);
 		tv_hpd_task = NULL;
 		return err;
+	} else {
+		pr_debug("tv_hpd_task is ok!\n");
 	}
 	pr_debug("tv_hpd_task is ok!\n");
 	wake_up_process(tv_hpd_task);

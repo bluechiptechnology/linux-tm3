@@ -71,8 +71,10 @@ extern int disable_proptx;
 #endif
 #define CMD_WL		"WL"
 
+/*
 #define IEEE80211_BAND_2GHZ 0
 #define IEEE80211_BAND_5GHZ 1
+ */
 
 int wl_ext_ioctl(struct net_device *dev, u32 cmd, void *arg, u32 len, u32 set)
 {

@@ -21,9 +21,6 @@ extern void sunxi_wlan_set_power(int on);
 extern int sunxi_wlan_get_bus_index(void);
 extern int sunxi_wlan_get_oob_irq(void);
 extern int sunxi_wlan_get_oob_irq_flags(void);
-#ifdef CONFIG_CUSTOM_MAC_ADDRESS
-extern void sunxi_wlan_custom_mac_address(u8 *mac);
-#endif
 #endif
 
 #ifdef CONFIG_DHD_USE_STATIC_BUF
@@ -161,10 +158,6 @@ static int dhd_wlan_set_carddetect(int present)
 static int dhd_wlan_get_mac_addr(unsigned char *buf)
 {
 	int err = 0;
-#ifdef CUSTOMER_HW_ALLWINNER
-	u8 mac[ETH_ALEN] = {0};
-	struct ether_addr mac_addr;
-#endif
 
 	printf("======== %s ========\n", __FUNCTION__);
 #ifdef EXAMPLE_GET_MAC
@@ -174,15 +167,6 @@ static int dhd_wlan_get_mac_addr(unsigned char *buf)
 		bcopy((char *)&ea_example, buf, sizeof(struct ether_addr));
 	}
 #endif /* EXAMPLE_GET_MAC */
-#ifdef CUSTOMER_HW_ALLWINNER
-#ifdef CONFIG_CUSTOM_MAC_ADDRESS
-	sunxi_wlan_custom_mac_address(mac);
-	if(is_valid_ether_addr(mac)) {
-		memcpy(mac_addr.octet, mac, ETHER_ADDR_LEN);
-		bcopy((char *)&mac_addr, buf, sizeof(struct ether_addr));
-	}
-#endif
-#endif
 #ifdef EXAMPLE_GET_MAC_VER2
 	/* EXAMPLE code */
 	{

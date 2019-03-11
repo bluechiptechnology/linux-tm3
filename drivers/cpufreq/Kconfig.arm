@@ -7,6 +7,14 @@ config ARM_SUNXI_IKS_CPUFREQ
 	help
 	  This adds the CPUFreq driver for sunxi big.little soc.
 	  If in doubt, say N.
+config ARM_SUNXI_AVS
+	bool "Use adaptive voltage scaling"
+	depends on CPU_FREQ && SUNXI_ARISC && (ARCH_SUN8IW16P1 || ARCH_SUN50IW6)
+	default n
+	help
+	  use adaptive voltage scaling to reduce power consumption.
+
+
 
 # big LITTLE core layer and glue drivers
 config ARM_BIG_LITTLE_CPUFREQ
