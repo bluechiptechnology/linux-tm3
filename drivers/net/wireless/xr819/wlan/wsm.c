@@ -1513,6 +1513,7 @@ static int wsm_receive_indication(struct xradio_common *hw_priv,
 					struct sk_buff **skb_p)
 {
 	struct xradio_vif *priv;
+	int if_id = interface_link_id;
 
 	hw_priv->rx_timestamp = jiffies;
 	if (hw_priv->wsm_cbc.rx) {
@@ -1529,26 +1530,25 @@ static int wsm_receive_indication(struct xradio_common *hw_priv,
 		/* TODO:COMBO: Frames received from scanning are received
 		* with interface ID == 2 */
 		if (is_hardware_xradio(hw_priv)) {
-			if (interface_link_id == XRWL_GENERIC_IF_ID) {
+			if (if_id == XRWL_GENERIC_IF_ID) {
 				/* Frames received in response to SCAN
 				 * Request */
-				interface_link_id =
-					get_interface_id_scanning(hw_priv);
-				if (interface_link_id == -1) {
-					interface_link_id = hw_priv->roc_if_id;
+				if_id = get_interface_id_scanning(hw_priv);
+				if (if_id == -1) {
+					if_id = hw_priv->roc_if_id;
 				}
 #ifdef ROAM_OFFLOAD
 				if (hw_priv->auto_scanning) {
-					interface_link_id = hw_priv->scan.if_id;
+					if_id = hw_priv->scan.if_id;
 				}
 #endif/*ROAM_OFFLOAD*/
 			}
 			/* linkid (peer sta id is encoded in bit 25-28 of
 			   flags field */
 			rx.link_id = ((rx.flags & (0xf << 25)) >> 25);
-			rx.if_id = interface_link_id;
+			rx.if_id = if_id;
 		} else {
-			rx.link_id = interface_link_id;
+			rx.link_id = if_id;
 			rx.if_id = 0;
 		}
 #ifdef MONITOR_MODE
@@ -1558,8 +1558,12 @@ static int wsm_receive_indication(struct xradio_common *hw_priv,
 #endif
 			priv = xrwl_hwpriv_to_vifpriv(hw_priv, rx.if_id);
 		if (!priv) {
-			wsm_printk(XRADIO_DBG_ERROR,
-				   "wsm_receive_indication: NULL priv drop frame\n");
+			wsm_printk(XRADIO_DBG_WARN,
+				"%s: NULL priv(if=%d) drop frame, link_id=%d,"
+				"scan_id=%d, roc_id=%d, scan_req=%p, direct_probe=%d\n",
+				__func__, if_id, interface_link_id,
+				hw_priv->scan.if_id, hw_priv->roc_if_id,
+				hw_priv->scan.req, hw_priv->scan.direct_probe);
 			return 0;
 		}
 		/*remove wsm hdr of skb*/
@@ -1574,6 +1578,7 @@ static int wsm_receive_indication(struct xradio_common *hw_priv,
 		    (ieee80211_is_probe_resp(hdr->frame_control) ||
 		    ieee80211_is_beacon(hdr->frame_control))) {
 			spin_unlock(&priv->vif_lock);
+			skb_push(*skb_p, hdr_len);
 			return 0;
 		}
 
@@ -2933,9 +2938,7 @@ static bool wsm_handle_tx_data(struct xradio_vif *priv,
 #if 0
 			wsm->more = 0;
 #endif /* 0 */
-			wsm_lock_tx_async(hw_priv);
-			if (queue_work(hw_priv->workqueue, &priv->unjoin_work) <= 0)
-				wsm_unlock_tx(hw_priv);
+			queue_delayed_work(hw_priv->workqueue, &priv->unjoin_delayed_work, 1*HZ);
 		}
 	}
 	break;
@@ -3188,6 +3191,14 @@ int wsm_get_tx(struct xradio_common *hw_priv, u8 **data,
 					priv->if_id,
 					tx_allowed_mask,
 					&wsm, &tx_info, &txpriv)) {
+				wsm_printk(XRADIO_DBG_WARN, "%s, if_id=%d(enable=%d), tx_allowed_mask=%08x," \
+					"queue_num=%d, queued_item=%zd, pending_item=%zd" \
+					"link_id_after_dtim=%d, link_id_uapsd=%d, tx_multicast=%d," \
+					"pspoll_mask=%d, sta_asleep_mask=%d\n",
+					__func__, priv->if_id, atomic_read(&priv->enabled),
+					tx_allowed_mask, queue_num, queue->num_queued, queue->num_pending,
+					priv->link_id_after_dtim, priv->link_id_uapsd,
+					priv->tx_multicast, priv->pspoll_mask, priv->sta_asleep_mask);
 				spin_unlock(&priv->vif_lock);
 				if_pending = 0;
 				continue;

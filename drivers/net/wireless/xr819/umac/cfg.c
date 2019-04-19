@@ -46,7 +46,7 @@ static struct wireless_dev *ieee80211_add_iface(struct wiphy *wiphy,
 	if (type == NL80211_IFTYPE_MONITOR && flags) {
 		sdata->u.mntr_flags = *flags;
 	}
-	wdev = &sdata->wdev;
+	wdev = &((*sdata).wdev);
 	return wdev;
 }
 
@@ -140,6 +140,23 @@ static int ieee80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 
 	if (pairwise)
 		key->conf.flags |= IEEE80211_KEY_FLAG_PAIRWISE;
+
+	if (pairwise && sdata->vif.type == NL80211_IFTYPE_STATION) {
+		int ret = 0;
+		/*
+		 * Fix a bug that in some case Add_key is before
+		 * 4-way handshake fourth frame sending while will cause 4-way handshake failed.
+		 * If and only if the sta has associated the ap and
+		 * start 4-way handshake but no finish(FINISH2), Add_key will
+		 * be delay until 4-way handshake finish(FINISH4)
+		 */
+		ret = wait_event_timeout(sdata->setkey_wq,
+				!((sdata->u.mgd.associated != NULL) && (sdata->fourway_state == SDATA_4WAY_STATE_FINISH2)), 0.5 * HZ);
+		if (ret == 0) {
+			sdata->fourway_state = SDATA_4WAY_STATE_NONE;
+			printk(KERN_WARNING "[XRADIO]4-Way Handshake timeout.\n");
+		}
+	}
 
 	mutex_lock(&sdata->local->sta_mtx);
 

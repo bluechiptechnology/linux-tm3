@@ -1310,6 +1310,8 @@ int mac80211_if_add(struct ieee80211_local *local, const char *name,
 		skb_queue_head_init(&sdata->fragments[i].skb_list);
 
 	INIT_LIST_HEAD(&sdata->key_list);
+	init_waitqueue_head(&sdata->setkey_wq);
+	sdata->fourway_state = SDATA_4WAY_STATE_NONE;
 
 	for (i = 0; i < NUM_NL80211_BANDS; i++) {
 		struct ieee80211_supported_band *sband;

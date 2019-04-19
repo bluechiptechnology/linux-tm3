@@ -291,14 +291,14 @@ static int sunxi_cpufreq_set_vf(struct cpufreq_frequency_table *table,
 	}
 
 	kvir =
-	kmalloc(num * sizeof(struct cpufreq_frequency_table), GFP_KERNEL);
+	kmalloc(num * sizeof(struct cpufreq_dvfs_table), GFP_KERNEL);
 	if (kvir == NULL) {
 		CPUFREQ_ERR("kmalloc error for transmiting vf table\n");
 		return -1;
 	}
 	memcpy((void *)kvir, (void *)cpufreq_dvfs_table,
-			num * sizeof(struct cpufreq_frequency_table));
-	__dma_flush_area((void *)kvir, num * sizeof(struct cpufreq_frequency_table));
+			num * sizeof(struct cpufreq_dvfs_table));
+	__dma_flush_area((void *)kvir, num * sizeof(struct cpufreq_dvfs_table));
 
 #ifdef CONFIG_SUNXI_ARISC
 	arisc_dvfs_cfg_vf_table(0, num, virt_to_phys(kvir));

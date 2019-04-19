@@ -217,6 +217,35 @@ static void ieee80211_frame_acked(struct sta_info *sta, struct sk_buff *skb)
 	}
 }
 
+static inline u16 IEEE_GET_BE16(const u8 *a)
+{
+	return (a[0] << 8) | a[1];
+}
+static void ieee80211_4way_frame_acked (struct sta_info *sta, struct ieee80211_hdr *hdr)
+{
+	const unsigned int machdrlen = ieee80211_hdrlen(hdr->frame_control);
+	const int LLC_TYPE_OFF = 6;
+	const int ETHERNET_TYPE_LEN = 2;
+
+	u8 *eapol_frame = (u8 *)hdr + machdrlen + LLC_TYPE_OFF + ETHERNET_TYPE_LEN;
+	struct ieee80211_eapol_key *key_data =
+		(struct ieee80211_eapol_key *) (eapol_frame + sizeof(struct ieee802_1x_hdr));
+	u16 key_info = IEEE_GET_BE16(key_data->key_info);
+
+	if (!!(key_info & IEEE80211_KEY_INFO_KEY_TYPE) == 1) {
+		if (!!(key_info & IEEE80211_KEY_INFO_ACK) == 0) {
+			if (!!(key_info & IEEE80211_KEY_INFO_SECURE) == 1) {
+				if (sta->sdata->fourway_state == SDATA_4WAY_STATE_FINISH2) {
+					sta->sdata->fourway_state = SDATA_4WAY_STATE_FINISH4;
+					wake_up(&sta->sdata->setkey_wq);
+				 }
+			} else {
+				sta->sdata->fourway_state = SDATA_4WAY_STATE_FINISH2;
+			}
+		}
+	}
+}
+
 static void ieee80211_set_bar_pending(struct sta_info *sta, u8 tid, u16 ssn)
 {
 	struct tid_ampdu_tx *tid_tx;
@@ -454,6 +483,12 @@ void mac80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 		    (local->hw.flags & IEEE80211_HW_REPORTS_TX_ACK_STATUS))
 			mac80211_sta_tx_notify(sta->sdata, (void *) skb->data, acked);
 
+		if ((sta->sdata->vif.type == NL80211_IFTYPE_STATION) &&
+			sta->sdata->u.mgd.associated != NULL &&
+			(ieee80211_is_eapol_key(hdr))) {
+			ieee80211_4way_frame_acked(sta, hdr);
+		}
+
 		if (local->hw.flags & IEEE80211_HW_REPORTS_TX_ACK_STATUS) {
 			if (info->flags & IEEE80211_TX_STAT_ACK) {
 				if (sta->lost_packets)
@@ -527,9 +562,6 @@ void mac80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 			&(IEEE80211_DEV_TO_SUB_IF(skb->dev))->wdev, cookie, skb->data, skb->len,
 			!!(info->flags & IEEE80211_TX_STAT_ACK), GFP_ATOMIC);
 	}
-
-	/* this was a transmitted frame, but now we want to reuse it */
-	skb_orphan(skb);
 
 	/* Need to make a copy before skb->cb gets cleared */
 	send_to_cooked = !!(info->flags & IEEE80211_TX_CTL_INJECTED) ||

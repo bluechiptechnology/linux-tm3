@@ -233,13 +233,9 @@ static ssize_t power_state_store(struct device *dev,
 	if (state > 1)
 		return -EINVAL;
 
-	mutex_lock(&sunxi_wlan_mutex);
 	if (state != wlan_data->power_state) {
-		err = sunxi_wlan_on(wlan_data, state);
-		if (err)
-			dev_err(dev, "set power failed\n");
+		sunxi_wlan_set_power(state);
 	}
-	mutex_unlock(&sunxi_wlan_mutex);
 
 	return count;
 }
@@ -257,8 +253,6 @@ static ssize_t scan_device_store(struct device *dev,
 	err = kstrtoul(buf, 0, &state);
 	if (err)
 		return err;
-
-	sunxi_wl_chipen_set(WL_DEV_WIFI, state);
 
 	dev_info(dev, "start scan device on bus_index: %d\n",
 			wlan_data->bus_index);

@@ -1244,6 +1244,7 @@ static void ieee80211_set_disassoc(struct ieee80211_sub_if_data *sdata,
 	memcpy(bssid, ifmgd->associated->bssid, ETH_ALEN);
 
 	ifmgd->associated = NULL;
+	sdata->fourway_state = SDATA_4WAY_STATE_NONE;
 	memset(ifmgd->bssid, 0, ETH_ALEN);
 
 	/*
@@ -2718,7 +2719,7 @@ int mac80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 	wk->probe_auth.bss = req->bss;
 
 	/* if we already have a probe, don't probe again */
-	if (req->bss->proberesp_ies)
+	if (req->bss->proberesp_ies || req->bss->beacon_ies)
 		wk->type = IEEE80211_WORK_AUTH;
 	else
 		wk->type = IEEE80211_WORK_DIRECT_PROBE;

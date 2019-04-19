@@ -7479,6 +7479,9 @@ static __init int tracer_init_tracefs(void)
 {
 	struct dentry *d_tracer;
 
+#ifndef CONFIG_FTRACE
+	return 0;
+#endif
 	trace_access_lock_init();
 
 	d_tracer = tracing_init_dentry();

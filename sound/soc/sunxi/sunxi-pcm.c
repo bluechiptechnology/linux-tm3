@@ -469,7 +469,8 @@ static struct snd_pcm_ops sunxi_pcm_ops_no_residue = {
 	.hw_params	= sunxi_pcm_hdmi_hw_params,
 	.hw_free	= sunxi_pcm_hdmi_hw_free,
 	.trigger	= sunxi_pcm_trigger,
-	.pointer	= snd_dmaengine_pcm_pointer_no_residue,
+	//.pointer	= snd_dmaengine_pcm_pointer_no_residue,
+	.pointer	= snd_dmaengine_pcm_pointer,
 	.mmap		= sunxi_pcm_mmap,
 	.copy		= sunxi_pcm_copy,
 };

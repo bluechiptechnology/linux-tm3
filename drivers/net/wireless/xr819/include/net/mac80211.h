@@ -2641,6 +2641,8 @@ void mac80211_napi_schedule(struct ieee80211_hw *hw);
  */
 void mac80211_napi_complete(struct ieee80211_hw *hw);
 
+int mac80211_ifdev_move(struct ieee80211_hw *hw, struct device *new_parent, int dpm_order);
+
 /**
  * ieee80211_rx - receive frame
  *

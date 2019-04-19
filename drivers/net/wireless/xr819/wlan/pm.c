@@ -419,11 +419,15 @@ int xradio_wow_suspend(struct ieee80211_hw *hw,
 		pm_printk(XRADIO_DBG_WARN, "%s num_vifs=0\n", __func__);
 
 #ifdef HW_RESTART
-	if (work_pending(&hw_priv->hw_restart_work)) {
+	if (cancel_work_sync(&hw_priv->hw_restart_work)) {
+		ret = schedule_work(&hw_priv->hw_restart_work);
+		if (ret <= 0)
+			pm_printk(XRADIO_DBG_ERROR, "%s restart_work failed!ret = %d\n", __func__, ret);
 		pm_printk(XRADIO_DBG_WARN, "Don't suspend "
-			   "because of hw_restart is working.\n");
+			   "because of hw_restart is pending.\n");
 		return -EBUSY;
 	}
+
 #endif
 	if (work_pending(&hw_priv->query_work)) {
 		pm_printk(XRADIO_DBG_WARN, "Don't suspend "
@@ -498,10 +502,23 @@ int xradio_wow_suspend(struct ieee80211_hw *hw,
 
 #ifdef CONFIG_XRADIO_SUSPEND_POWER_OFF
 #ifdef CONFIG_XRADIO_EXTEND_SUSPEND
-	if (check_scene_locked(SCENE_SUPER_STANDBY) == 0)
-		return xradio_poweroff_suspend(hw_priv);
+	if (check_scene_locked(SCENE_SUPER_STANDBY) == 0) {
+		if (xradio_poweroff_suspend(hw_priv)) {
+			pm_printk(XRADIO_DBG_WARN, "Don't suspend "
+				"because of xradio_poweroff_suspend failed.\n");
+			goto revert3;
+		}
+		return 0;
+	}
+
 #else
-	return xradio_poweroff_suspend(hw_priv);
+	if (xradio_poweroff_suspend(hw_priv)) {
+		pm_printk(XRADIO_DBG_WARN, "Don't suspend "
+			"because of xradio_poweroff_suspend failed.\n");
+		goto revert3;
+	}
+	return 0;
+
 #endif
 #endif
 
@@ -545,12 +562,13 @@ int xradio_wow_suspend(struct ieee80211_hw *hw,
 	if (atomic_read(&hw_priv->bh_rx)) {
 		pm_printk(XRADIO_DBG_WARN, "Don't suspend "
 			   "because of recieved rx event!\n");
-		xradio_wow_resume(hw);
-		return -EAGAIN;
+		goto revert6;
 	}
 	atomic_set(&hw_priv->suspend_state, XRADIO_CONNECT_SUSP);
 	return 0;
 
+revert6:
+	hw_priv->sbus_ops->power_mgmt(hw_priv->sbus_priv, false);
 revert5:
 	xradio_bh_resume(hw_priv);
 revert4:
@@ -889,18 +907,18 @@ static int xradio_poweroff_suspend(struct xradio_common *hw_priv)
 	flush_workqueue(hw_priv->workqueue);
 	flush_workqueue(hw_priv->spare_workqueue);
 
-	/* Schedule hardware restart, ensure no cmds in progress.*/
-	down(&hw_priv->wsm_cmd_sema);
-	atomic_set(&hw_priv->suspend_state, XRADIO_POWEROFF_SUSP);
-	hw_priv->hw_restart = true;
-	up(&hw_priv->wsm_cmd_sema);
-
 	/* Stop serving thread */
 	if (xradio_bh_suspend(hw_priv)) {
 		pm_printk(XRADIO_DBG_WARN, "%s, xradio_bh_suspend failed!\n",
 			  __func__);
 		return -EBUSY;
 	}
+
+	/* Schedule hardware restart, ensure no cmds in progress.*/
+	down(&hw_priv->wsm_cmd_sema);
+	atomic_set(&hw_priv->suspend_state, XRADIO_POWEROFF_SUSP);
+	hw_priv->hw_restart = true;
+	up(&hw_priv->wsm_cmd_sema);
 
 	/* Going to sleep with wifi power down. */
 	xradio_wlan_power(0);

@@ -3065,6 +3065,9 @@ static __init int event_trace_init(void)
 	struct dentry *entry;
 	int ret;
 
+#ifndef CONFIG_FTRACE
+	return 0;
+#endif
 	tr = top_trace_array();
 	if (!tr)
 		return -ENODEV;

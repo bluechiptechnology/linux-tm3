@@ -11,10 +11,10 @@
 #ifndef XR_VERSION_H
 #define XR_VERSION_H
 
-#define XRADIO_VERSION  "XR_V02.15.54"
+#define XRADIO_VERSION  "XR_V02.15.71"
 
 #define XRADIO_MAIN_VER 2
 #define XRADIO_SUB_VER  15
-#define XRADIO_REV_VER  54
+#define XRADIO_REV_VER  71
 
 #endif

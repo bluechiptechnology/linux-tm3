@@ -552,7 +552,7 @@ void xradio_bss_info_changed(struct ieee80211_hw *dev,
 				if (ret)
 					priv->powersave_mode = pm;
 			} else {
-				priv->powersave_mode.pmMode = WSM_PSM_FAST_PS;
+				ap_printk(XRADIO_DBG_WARN, "arp_addr_cnt not clear at disconnecting,filter abnormal enable!!!\n");
 			}
 			priv->power_set_true = 0;
 			priv->user_power_set_true = 0;

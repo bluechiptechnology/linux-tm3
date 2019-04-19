@@ -442,6 +442,22 @@ void mac80211_restart_hw(struct ieee80211_hw *hw)
 }
 EXPORT_SYMBOL(mac80211_restart_hw);
 
+int mac80211_ifdev_move(struct ieee80211_hw *hw, struct device *new_parent, int dpm_order)
+{
+	struct ieee80211_local *local = hw_to_local(hw);
+	struct ieee80211_sub_if_data *sdata;
+	int ret;
+
+	list_for_each_entry(sdata, &local->interfaces, list) {
+	ret = device_move(&sdata->dev->dev, new_parent, dpm_order);
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(mac80211_ifdev_move);
+
+
 static void mac80211_recalc_smps_work(struct work_struct *work)
 {
 	struct ieee80211_local *local =

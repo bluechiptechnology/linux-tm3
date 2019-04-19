@@ -376,11 +376,15 @@ static int __init addr_mgt_init(void)
 	info.type_addr_bt   = DEF_TYPE_ADDR_BT;
 	info.type_addr_eth  = DEF_TYPE_ADDR_ETH;
 #ifdef __USE_DTB_CTRL
-	platform_driver_probe(&addr_mgt_driver, addr_mgt_probe);
+	status = platform_driver_probe(&addr_mgt_driver, addr_mgt_probe);
+	if (status < 0) {
+		ADDR_MGT_ERR("driver probe error, status: %d.", status);
+		return -1;
+	}
 #endif
 	status = class_register(&addr_class);
 	if (status < 0) {
-		ADDR_MGT_ERR("err, status: %d.", status);
+		ADDR_MGT_ERR("class register error, status: %d.", status);
 		return -1;
 	}
 	ADDR_MGT_DBG("success.");

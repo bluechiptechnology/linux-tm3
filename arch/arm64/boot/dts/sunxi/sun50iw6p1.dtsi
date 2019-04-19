@@ -409,28 +409,28 @@
 
 			opp00 {
 				opp-hz = /bits/ 64 <480000000>;
-				opp-microvolt = <820000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
 			};
 			opp01 {
 				opp-hz = /bits/ 64 <720000000>;
-				opp-microvolt = <820000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
 			};
 			opp02 {
 				opp-hz = /bits/ 64 <816000000>;
-				opp-microvolt = <820000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
 			};
 			opp03 {
 				opp-hz = /bits/ 64 <888000000>;
-				opp-microvolt = <820000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
@@ -465,35 +465,35 @@
 
 			opp00 {
 				opp-hz = /bits/ 64 <480000000>;
-				opp-microvolt = <800000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
 			};
 			opp01 {
 				opp-hz = /bits/ 64 <720000000>;
-				opp-microvolt = <800000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
 			};
 			opp02 {
 				opp-hz = /bits/ 64 <816000000>;
-				opp-microvolt = <800000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
 			};
 			opp03 {
 				opp-hz = /bits/ 64 <888000000>;
-				opp-microvolt = <800000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <2800>;
 			};
 			opp04 {
 				opp-hz = /bits/ 64 <1080000000>;
-				opp-microvolt = <840000>;
+				opp-microvolt = <880000>;
 				axi-bus-divide-ratio = <3>;
 				clock-latency-ns = <2000000>;
 				pval = <3100>;

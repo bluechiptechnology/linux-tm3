@@ -333,10 +333,12 @@ static int sunxi_core_open_phy(void __iomem *regs)
 	reg_val |= SUNXI_USB2PHYCFG_SUSPHY;
 	USBC_Writel(reg_val, regs + (SUNXI_GUSB2PHYCFG(0) - SUNXI_GLOBALS_REGS_START));
 
-	/* Enable SOFITPSYNC for suspend. */
+	/* Enable SOFITPSYNC for suspend. for AW1728, it will cause xHCI to die probabilistically */
+	/*
 	reg_val = USBC_Readl(regs + (SUNXI_GLOBALS_REGS_GCTL - SUNXI_GLOBALS_REGS_START));
 	reg_val |= SUNXI_GCTL_SOFITPSYNC;
 	USBC_Writel(reg_val, regs + (SUNXI_GLOBALS_REGS_GCTL - SUNXI_GLOBALS_REGS_START));
+	*/
 
 	return 0;
 }
