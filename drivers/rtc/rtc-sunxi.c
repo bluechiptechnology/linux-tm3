@@ -693,7 +693,8 @@ static int sunxi_rtc_probe(struct platform_device *pdev)
 	writel(tmp_data, chip->base + SUNXI_LOSC_CTRL);
 
 	tmp_data = readl(chip->base + SUNXI_LOSC_CTRL);
-	tmp_data |= (RTC_SOURCE_EXTERNAL | REG_LOSCCTRL_MAGIC);
+	tmp_data &= (~SUNXI_LOSC_CTRL_SRC_SEL);
+	tmp_data |= (REG_LOSCCTRL_MAGIC);
 	writel(tmp_data, chip->base + SUNXI_LOSC_CTRL);
 
 	/* We need to set GSM after change clock source */
@@ -701,6 +702,13 @@ static int sunxi_rtc_probe(struct platform_device *pdev)
 	tmp_data = readl(chip->base + SUNXI_LOSC_CTRL);
 	tmp_data |= (EXT_LOSC_GSM | REG_LOSCCTRL_MAGIC);
 	writel(tmp_data, chip->base + SUNXI_LOSC_CTRL);
+
+	/* Open internal OSC clk auto calibration */
+	tmp_data = readl(chip->base + SUNXI_INTOSC_CLK_AUTO_CALI);
+	tmp_data |= SUNXI_RC_CALI_EN;
+	tmp_data |= SUNXI_RC_CALI_FN_EN;
+	writel(tmp_data, chip->base + SUNXI_INTOSC_CLK_AUTO_CALI);
+
 
 	device_init_wakeup(&pdev->dev, 1);
 

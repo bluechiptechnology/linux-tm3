@@ -1594,7 +1594,7 @@ CONFIG_XRADIO_DEBUGFS=y
 # CONFIG_XR829_WLAN is not set
 # CONFIG_USB_NET_RNDIS_WLAN is not set
 CONFIG_BCMDHD=m
-CONFIG_BCMDHD_FW_PATH="/system/vendor/modules/fw_bcmdhd.bin"
+CONFIG_BCMDHD_FW_PATH="/system/vendor/modules/fw_bcmdhd_ag.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/modules/nvram.txt"
 CONFIG_BCMDHD_SDIO=y
 CONFIG_BCMDHD_OOB=y
