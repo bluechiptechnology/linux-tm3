@@ -28,6 +28,7 @@ obj-$(CONFIG_TOUCHSCREEN_CYTTSP4_SPI)	+= cyttsp4_spi.o
 obj-$(CONFIG_TOUCHSCREEN_DA9034)	+= da9034-ts.o
 obj-$(CONFIG_TOUCHSCREEN_DA9052)	+= da9052_tsi.o
 obj-$(CONFIG_TOUCHSCREEN_DYNAPRO)	+= dynapro.o
+obj-$(CONFIG_TOUCHSCREEN_FT5X06)        += ft5x06-i2c.o
 obj-$(CONFIG_TOUCHSCREEN_EDT_FT5X06)	+= edt-ft5x06.o
 obj-$(CONFIG_TOUCHSCREEN_HAMPSHIRE)	+= hampshire.o
 obj-$(CONFIG_TOUCHSCREEN_GUNZE)		+= gunze.o
@@ -96,3 +97,8 @@ obj-$(CONFIG_TOUCHSCREEN_GSLX680NEW)	+= gslx680new/
 obj-$(CONFIG_TOUCHSCREEN_FT5X16_TS)    += ftxxxx/
 obj-$(CONFIG_INPUT_TOUCHSCREEN)   += gt9xxnew/
 obj-$(CONFIG_INPUT_TOUCHSCREEN)	  += gt9xx/
+obj-$(CONFIG_TOUCHSCREEN_ILITEK) += ilitek_lim.o \
+                                    ilitek_hall.o \
+                                    ilitek_sensor_test.o \
+                                    ilitek_tool.o \
+                                    ilitek_update.o

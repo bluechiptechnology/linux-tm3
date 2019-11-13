@@ -188,7 +188,7 @@ static struct gpio_leds_priv *gpio_leds_create(struct platform_device *pdev)
 			return ERR_PTR(-EINVAL);
 		}
 
-		fwnode_property_read_string(child, "linux,default-trigger",
+		fwnode_property_read_string(child, "linux,defaulttrigger",
 					    &led.default_trigger);
 
 		if (!fwnode_property_read_string(child, "default-state",

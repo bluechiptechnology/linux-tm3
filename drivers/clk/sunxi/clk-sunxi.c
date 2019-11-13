@@ -59,6 +59,7 @@ static void __init of_sunxi_fixed_factor_clk_setup(struct device_node *node)
 	const char *clk_name = node->name;
 	const char *parent_name;
 	u32 div, mult;
+	u32 flags = 0;
 
 	if (of_property_read_u32(node, "clock-div", &div)) {
 		pr_err("%s Fixed factor clock <%s> must have a clock-div property\n",
@@ -79,7 +80,10 @@ static void __init of_sunxi_fixed_factor_clk_setup(struct device_node *node)
 	}
 	parent_name = of_clk_get_parent_name(node, 0);
 
-	clk = clk_register_fixed_factor(NULL, clk_name, parent_name, 0,
+
+	of_property_read_u32(node, "flags", &flags);
+
+	clk = clk_register_fixed_factor(NULL, clk_name, parent_name, flags,
 					mult, div);
 	if (!IS_ERR(clk)) {
 		clk_register_clkdev(clk, clk_name, NULL);

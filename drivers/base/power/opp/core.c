@@ -1334,11 +1334,15 @@ struct opp_table *dev_pm_opp_set_regulator(struct device *dev, const char *name)
 
 	mutex_lock(&opp_table_lock);
 
+	printk("dev_pm_opp_set_regulator1\r\n");
+
 	opp_table = _add_opp_table(dev);
 	if (!opp_table) {
 		ret = -ENOMEM;
 		goto unlock;
 	}
+
+	printk("dev_pm_opp_set_regulator2\r\n");
 
 	/* This should be called before OPPs are initialized */
 	if (WARN_ON(!list_empty(&opp_table->opp_list))) {
@@ -1346,11 +1350,16 @@ struct opp_table *dev_pm_opp_set_regulator(struct device *dev, const char *name)
 		goto err;
 	}
 
+	printk("dev_pm_opp_set_regulator3\r\n");
+
 	/* Already have a regulator set */
 	if (WARN_ON(!IS_ERR(opp_table->regulator))) {
 		ret = -EBUSY;
 		goto err;
 	}
+
+	printk("dev_pm_opp_set_regulator4: %s\r\n", name);
+
 	/* Allocate the regulator */
 	reg = regulator_get_optional(dev, name);
 	if (IS_ERR(reg)) {
@@ -1360,6 +1369,9 @@ struct opp_table *dev_pm_opp_set_regulator(struct device *dev, const char *name)
 				__func__, name, ret);
 		goto err;
 	}
+
+
+	printk("dev_pm_opp_set_regulator5\r\n");
 
 	opp_table->regulator = reg;
 

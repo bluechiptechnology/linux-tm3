@@ -21,7 +21,7 @@
 #define _SUNXI_SPI_H_
 
 #define SPI_MODULE_NUM		(4)
-#define SPI_FIFO_DEPTH		(128)
+#define SPI_FIFO_DEPTH		(64)
 #define MAX_FIFU		64
 #define BULK_DATA_BOUNDARY	64	 /* can modify to adapt the application */
 #define SPI_MAX_FREQUENCY	100000000 /* spi controller just support 80Mhz */

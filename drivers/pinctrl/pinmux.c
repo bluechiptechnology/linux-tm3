@@ -89,6 +89,7 @@ static int pin_request(struct pinctrl_dev *pctldev,
 	int status = -EINVAL;
 
 	desc = pin_desc_get(pctldev, pin);
+
 	if (desc == NULL) {
 		dev_err(pctldev->dev,
 			"pin %d is not registered so it cannot be requested\n",

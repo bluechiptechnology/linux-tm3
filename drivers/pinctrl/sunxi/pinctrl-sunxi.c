@@ -762,6 +762,8 @@ static int sunxi_pinctrl_gpio_of_xlate(struct gpio_chip *gc,
 	if (pin > gc->ngpio)
 		return -EINVAL;
 
+	//DPR this is an Allwinner hack
+
 	if (flags) {
 		config = (struct gpio_config *)flags;
 		config->gpio = base + gpiospec->args[1];
@@ -927,6 +929,8 @@ static void sunxi_pinctrl_irq_ack_unmask(struct irq_data *d)
 	sunxi_pinctrl_irq_unmask(d);
 }
 
+extern int enable_gpio_wakeup_src(int para);
+
 static int sunxi_pinctrl_irq_set_wake(struct irq_data *d, unsigned int state)
 {
 	/* enable_wakeup_src interface is not okay now, wait for standby */
@@ -938,6 +942,14 @@ static int sunxi_pinctrl_irq_set_wake(struct irq_data *d, unsigned int state)
 	else
 		disable_wakeup_src(CPUS_WAKEUP_GPIO, pctl->irq_array[d->hwirq]);
 #endif
+
+	//DPR
+	struct sunxi_pinctrl *pctl = irq_data_get_irq_chip_data(d);
+	if (state)
+	{
+		enable_gpio_wakeup_src(pctl->irq_array[d->hwirq]);
+	}
+
 	return 0;
 }
 

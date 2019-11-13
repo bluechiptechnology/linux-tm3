@@ -103,6 +103,7 @@
 			clocks = <&clk_pll_cpu>;
 			clock-latency = <2000000>;
 			clock-frequency = <1320000000>;
+			regulators = "axp80x_dcdca";
 			operating-points-v2 = <&cpu_opp_l_table0 &cpu_opp_l_table1 &cpu_opp_l_table2>;
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0 &SYS_SLEEP_0>;
 		};
@@ -114,6 +115,7 @@
 			enable-method = "psci";
 			clocks = <&clk_pll_cpu>;
 			clock-frequency = <1320000000>;
+			regulators = "axp80x_dcdca";
 			operating-points-v2 = <&cpu_opp_l_table0 &cpu_opp_l_table1 &cpu_opp_l_table2>;
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0 &SYS_SLEEP_0>;
 		};
@@ -125,6 +127,7 @@
 			enable-method = "psci";
 			clocks = <&clk_pll_cpu>;
 			clock-frequency = <1320000000>;
+			regulators = "axp80x_dcdca";
 			operating-points-v2 = <&cpu_opp_l_table0 &cpu_opp_l_table1 &cpu_opp_l_table2>;
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0 &SYS_SLEEP_0>;
 		};
@@ -136,6 +139,7 @@
 			enable-method = "psci";
 			clocks = <&clk_pll_cpu>;
 			clock-frequency = <1320000000>;
+			regulators = "axp80x_dcdca";
 			operating-points-v2 = <&cpu_opp_l_table0 &cpu_opp_l_table1 &cpu_opp_l_table2>;
 			cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0 &SYS_SLEEP_0>;
 		};
@@ -583,9 +587,11 @@
 		};
 
 		standby_space: standby_space@040020000 {
-			compatible = "allwinner,sun50iw6-usbstandby";
+			compatible = "allwinner,sun50iw6-superstandby";
 			/* num    dst        offset     size						*/
 			space1 = <0x40020000 0x00000000 0x00000800>; /* super standby para space        */
+			standby_stay_cpu = <0x0>;
+			device_type = "standby_space";
 		};
 
 		msgbox: msgbox@03003000 {
@@ -615,6 +621,7 @@
 			clocks = <&clk_hosc>,<&clk_cpurcir>;
 			supply = "vcc-pl";
 			supply_vol = "3300000";
+			device_type = "s_cir0";
 			status = "okay";
 		};
 
@@ -624,7 +631,8 @@
 			interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&s_uart0_pins_a>;
-			status = "okay";
+			device_type = "s_uart0";
+			status = "disabled";
 		};
 
 		s_twi0: s_twi@1f03400 {
@@ -640,7 +648,8 @@
 			compatible = "allwinner,s_jtag";
 			pinctrl-names = "default";
 			pinctrl-0 = <&s_jtag0_pins_a>;
-			status = "disable";
+			device_type = "s_jtag0";
+			status = "disabled";
 		};
 
 		box_start_os: box_start_os0 {
@@ -651,6 +660,7 @@
 			pmukey_num = <0x0>;
 			led_power = <0x0>;
 			led_state = <0x0>;
+			device_type = "box_start_os";
 			status = "disable";
 		};
 
@@ -739,7 +749,7 @@
 			pinctrl-1 = <&uart2_pins_b>;
 			uart2_port = <2>;
 			uart2_type = <4>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		uart3: uart@05000c00 {
@@ -915,6 +925,15 @@
 			status = "okay";
 		};
 
+		usbc3 {
+			device_type = "usbc3";
+			status = "okay";
+			usb_drv_vbus_gpio;
+			usb_host_init_state = <0x1>;
+			usb_regulator_io = "nocare";
+			usb_wakeup_suspend = <0x0>;
+		};
+
 		ac200_codec: ac200_codec {
 			compatible = "allwinner,ac200_codec";
 			status = "disabled";
@@ -936,6 +955,7 @@
 			frametype = <0x00>;
 			tdm_num = <0x00>;
 			mclk_div = <0x00>;
+			device_type = "daudio0";
 			status = "disabled";
 		};
 
@@ -943,7 +963,8 @@
 			compatible = "allwinner,sunxi-tdmhdmi";
 			reg = <0x0 0x05091000 0x0 0x74>;
 			clocks = <&clk_pll_audio>,<&clk_i2s1>;
-			status = "disabled";
+			device_type = "audiohdmi";
+			status = "okay";
 		};
 
 		daudio2:daudio@0x05092000 {
@@ -953,15 +974,16 @@
 			pinctrl-names = "default","sleep";
 			pinctrl-0 = <&daudio2_pins_a>;
 			pinctrl-1 = <&daudio2_pins_b>;
-			pcm_lrck_period =  <0x20>;
+			pcm_lrck_period =  <0x40>;
 			slot_width_select =  <0x20>;
 			daudio_master =  <0x04>;
-			audio_format =  <0x01>;
-			signal_inversion =  <0x01>;
-			tdm_config =  <0x01>;
+			audio_format =  <0x4>;
+			signal_inversion =  <0x3>;
+			tdm_config =  <0x1>;
 			frametype = <0x00>;
 			tdm_num = <0x2>;
-			mclk_div = <0x0>;
+			mclk_div = <0x1>;
+			device_type = "daudio2";
 			status = "disabled";
 		};
 
@@ -980,8 +1002,9 @@
 			tdm_config = <0x01>;
 			frametype = <0x00>;
 			tdm_num = <0x3>;
-			mclk_div = <0x0>;
-			status = "disabled";
+			mclk_div = <0x1>;
+			device_type = "daudio3";
+			status = "okay";
 		};
 
 		spdif:spdif-controller@0x05093000{
@@ -991,6 +1014,7 @@
 			pinctrl-names = "default","sleep";
 			pinctrl-0 = <&spdif_pins_a>;
 			pinctrl-1 = <&spdif_pins_b>;
+			device_type = "spdif";
 			status = "disabled";
 		};
 
@@ -1001,6 +1025,7 @@
 			pinctrl-names = "default","sleep";
 			pinctrl-0 = <&dmic_pins_a>;
 			pinctrl-1 = <&dmic_pins_b>;
+			device_type = "dmic";
 			status = "disabled";
 		};
 
@@ -1049,6 +1074,7 @@
 			tdm_config = <0x01>;
 			tdm_num = <0x0>;
 			mclk_div = <0x0>;
+			device_type = "ahub_daudio0";
 			status = "disabled";
 		};
 
@@ -1065,7 +1091,8 @@
 			signal_inversion = <0x01>;
 			tdm_config = <0x01>;
 			tdm_num = <0x1>;
-			mclk_div = <0x0>;
+			mclk_div = <0x1>;
+			device_type = "ahub_daudio1";
 			status = "okay";
 		};
 
@@ -1085,7 +1112,8 @@
 			signal_inversion = <0x01>;
 			tdm_config = <0x01>;
 			tdm_num = <0x2>;
-			mclk_div = <0x0>;
+			mclk_div = <0x1>;
+			device_type = "ahub_daudio2";
 			status = "okay";
 		};
 
@@ -1106,6 +1134,7 @@
 			tdm_config = <0x01>;
 			tdm_num = <0x3>;
 			mclk_div = <0x4>;
+			device_type = "ahub_daudio3";
 			status = "okay";
 		};
 
@@ -1113,13 +1142,15 @@
 			compatible = "allwinner,sunxi-daudio0-machine";
 			sunxi,daudio-controller = <&daudio0>;
 			sunxi,cpudai-controller = <&ahub_daudio0>;
-			status = "disable";
+			device_type = "snddaudio0";
+			status = "disabled";
 		};
 
 		sndhdmi:sound@1{
 			compatible = "allwinner,sunxi-hdmi-machine";
 			sunxi,hdmi-controller = <&audiohdmi>;
 			sunxi,cpudai-controller = <&ahub_daudio1>;
+			device_type = "sndhdmi";
 			status = "okay";
 		};
 
@@ -1127,7 +1158,8 @@
 			compatible = "allwinner,sunxi-daudio2-machine";
 			sunxi,daudio-controller = <&daudio2>;
 			sunxi,cpudai-controller = <&ahub_daudio2>;
-			status = "okay";
+			device_type = "snddaudio2";
+			status = "disabled";
 		};
 
 		snddaudio3:sound@3{
@@ -1137,18 +1169,21 @@
 			/* acx00-codec throught mfd_add_devices */
 			sunxi,snddaudio-codec = "acx00-codec";
 			sunxi,snddaudio-codec-dai = "acx00-dai";
+			device_type = "snddaudio3";
 			status = "okay";
 		};
 
 		sndspdif:sound@4{
 			compatible = "allwinner,sunxi-spdif-machine";
 			sunxi,spdif-controller = <&spdif>;
+			device_type = "sndspdif";
 			status = "disabled";
 		};
 
 		snddmic:sound@5{
 			compatible = "allwinner,sunxi-dmic-machine";
 			sunxi,dmic-controller = <&dmic>;
+			device_type = "snddmic";
 			status = "disabled";
 		};
 
@@ -1158,6 +1193,7 @@
 			sunxi,cpudai-controller1 = <&ahub_cpudai1>;
 			sunxi,cpudai-controller2 = <&ahub_cpudai2>;
 			sunxi,audio-codec = <&ahub_codec>;
+			device_type = "sndahub";
 			status = "okay";
 		};
 
@@ -1218,70 +1254,7 @@
 			#interrupt-cells = <1>;
 			interrupt-map-mask = <0 0 0 0>;
 			interrupt-map = <0 0 0 1 &gic GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>;
-			status = "okay";
-		};
-
-		sdc2: sdmmc@04022000 {
-			compatible = "allwinner,sunxi-mmc-v4p6x";
-			device_type = "sdc2";
-			reg = <0x0 0x04022000 0x0 0x1000>;
-			interrupts = <GIC_SPI 37 0x0104>;
-			clocks = <&clk_hosc>,
-				 <&clk_pll_periph1x2>,
-				 <&clk_sdmmc2_mod>,
-				 <&clk_sdmmc2_bus>,
-				 <&clk_sdmmc2_rst>;
-			clock-names = "osc24m","pll_periph","mmc","ahb","rst";
-			pinctrl-names = "default","sleep";
-			pinctrl-0 = <&sdc2_pins_a>;
-			pinctrl-1 = <&sdc2_pins_b>;
-			bus-width = <8>;
-			/*mmc-ddr-1_8v;*/
-			/*mmc-hs200-1_8v;*/
-			/*mmc-hs400-1_8v;*/
-			/*non-removable;*/
-			/*max-frequency = <200000000>;*/
-			max-frequency = <50000000>;
-			cap-sd-highspeed;
-			cap-mmc-highspeed;
-			cap-erase;
-			mmc-high-capacity-erase-size;
-			no-sdio;
-			no-sd;
-			/*-- speed mode --*/
-			/*sm0: DS26_SDR12*/
-			/*sm1: HSSDR52_SDR25*/
-			/*sm2: HSDDR52_DDR50*/
-			/*sm3: HS200_SDR104*/
-			/*sm4: HS400*/
-			/*-- frequency point --
-			/*f0: CLK_400K*/
-			/*f1: CLK_25M*/
-			/*f2: CLK_50M*/
-			/*f3: CLK_100M*/
-			/*f4: CLK_150M*/
-			/*f5: CLK_200M*/
-
-			sdc_tm4_sm0_freq0 = <0>;
-			sdc_tm4_sm0_freq1 = <0>;
-			sdc_tm4_sm1_freq0 = <0x00000000>;
-			sdc_tm4_sm1_freq1 = <0>;
-			sdc_tm4_sm2_freq0 = <0x00000000>;
-			sdc_tm4_sm2_freq1 = <0>;
-			sdc_tm4_sm3_freq0 = <0x05000000>;
-			sdc_tm4_sm3_freq1 = <0x00000005>;
-			sdc_tm4_sm4_freq0 = <0x00050000>;
-			sdc_tm4_sm4_freq1 = <0x00000004>;
-
-			/*vmmc-supply = <&reg_3p3v>;*/
-			/*vqmc-supply = <&reg_3p3v>;*/
-			/*vdmc-supply = <&reg_3p3v>;*/
-			/*vmmc = "vcc-card";*/
-			/*vqmc = "";*/
-			/*vdmc = "";*/
-			/*sunxi-power-save-mode;*/
-			/*status = "disabled";*/
-			status = "okay";
+			status = "disabled";
 		};
 
 		sdc0: sdmmc@04020000 {
@@ -1383,6 +1356,69 @@
 			status = "disabled";
 		};
 
+		sdc2: sdmmc@04022000 {
+			compatible = "allwinner,sunxi-mmc-v4p6x";
+			device_type = "sdc2";
+			reg = <0x0 0x04022000 0x0 0x1000>;
+			interrupts = <GIC_SPI 37 0x0104>;
+			clocks = <&clk_hosc>,
+				 <&clk_pll_periph1x2>,
+				 <&clk_sdmmc2_mod>,
+				 <&clk_sdmmc2_bus>,
+				 <&clk_sdmmc2_rst>;
+			clock-names = "osc24m","pll_periph","mmc","ahb","rst";
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&sdc2_pins_a>;
+			pinctrl-1 = <&sdc2_pins_b>;
+			bus-width = <8>;
+			/*mmc-ddr-1_8v;*/
+			/*mmc-hs200-1_8v;*/
+			/*mmc-hs400-1_8v;*/
+			/*non-removable;*/
+			/*max-frequency = <200000000>;*/
+			max-frequency = <50000000>;
+			cap-sd-highspeed;
+			cap-mmc-highspeed;
+			cap-erase;
+			mmc-high-capacity-erase-size;
+			no-sdio;
+			no-sd;
+			/*-- speed mode --*/
+			/*sm0: DS26_SDR12*/
+			/*sm1: HSSDR52_SDR25*/
+			/*sm2: HSDDR52_DDR50*/
+			/*sm3: HS200_SDR104*/
+			/*sm4: HS400*/
+			/*-- frequency point --
+			/*f0: CLK_400K*/
+			/*f1: CLK_25M*/
+			/*f2: CLK_50M*/
+			/*f3: CLK_100M*/
+			/*f4: CLK_150M*/
+			/*f5: CLK_200M*/
+
+			sdc_tm4_sm0_freq0 = <0>;
+			sdc_tm4_sm0_freq1 = <0>;
+			sdc_tm4_sm1_freq0 = <0x00000000>;
+			sdc_tm4_sm1_freq1 = <0>;
+			sdc_tm4_sm2_freq0 = <0x00000000>;
+			sdc_tm4_sm2_freq1 = <0>;
+			sdc_tm4_sm3_freq0 = <0x05000000>;
+			sdc_tm4_sm3_freq1 = <0x00000005>;
+			sdc_tm4_sm4_freq0 = <0x00050000>;
+			sdc_tm4_sm4_freq1 = <0x00000004>;
+
+			/*vmmc-supply = <&reg_3p3v>;*/
+			/*vqmc-supply = <&reg_3p3v>;*/
+			/*vdmc-supply = <&reg_3p3v>;*/
+			/*vmmc = "vcc-card";*/
+			/*vqmc = "";*/
+			/*vdmc = "";*/
+			/*sunxi-power-save-mode;*/
+			/*status = "disabled";*/
+			status = "okay";
+		};
+
 		disp: disp@01000000 {
 			compatible = "allwinner,sunxi-disp";
 			reg = <0x0 0x01000000 0x0 0x01400000>,/*de*/
@@ -1432,6 +1468,7 @@
 		tv0: tv0@01c94000 {
 			compatible = "allwinner,sunxi-tv";
 			reg = <0x0 0x01e40000 0x0 0x1000>;
+			device_type = "tv0";
 			/* clocks = <&clk_tve>; */
 			status = "disabled";
 		};
@@ -1445,6 +1482,7 @@
 		};
 
 		pwm: pwm@0300a000 {
+			#pwm-cells = <2>;
 			compatible = "allwinner,sunxi-pwm";
 			reg = <0x0 0x0300a000 0x0 0x3c>;
 			clocks = <&clk_pwm>;
@@ -1584,7 +1622,7 @@
 				pinctrl-0 		= <&csi_cci0_pins_a>;
 				pinctrl-1 		= <&csi_cci0_pins_b>;
 				device_id = <0>;
-				status = "okay";
+				status = "disabled";
 			};
 			csi0:csi@0x06621000 {
 				device_type = "csi0";
@@ -1596,7 +1634,7 @@
 				pinctrl-1 = <&csi0_pins_b>;
 				device_id = <0>;
 				iommus = <&mmu_aw 4 1>;
-				status = "okay";
+				status = "disabled";
 			};
 			csi1:csi@1 {
 				device_type = "csi1";
@@ -1795,6 +1833,7 @@
 			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clk_di> ,<&clk_pll_periph0>;
 			iommus = <&mmu_aw 2 1>;
+			device_type = "di";
 			status = "okay";
 		};
 
@@ -1831,8 +1870,14 @@
 		pmu0: pmu@0{
 			interrupts = <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>;
 			status = "okay";
+			device_type = "pmu0";
+			compatible = "axp806";
+			pmu_id = <0x3>;
+			pmu_irq_wakeup = <0x1>;
+			pmu_hot_shutdown = <0x1>;
 
 			powerkey0: powerkey@0{
+				device_type = "powerkey0";
 				status = "okay";
 			};
 
@@ -1849,6 +1894,7 @@
 			};
 
 			charger0: charger@0{
+				device_type = "charger0";
 				status = "disabled";
 			};
 		};
@@ -1885,7 +1931,7 @@
 			nand0_p1 = <0x55aaaa55>;
 			nand0_p2 = <0x55aaaa55>;
 			nand0_p3 = <0x55aaaa55>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		ts0:ts0@05060000 {
@@ -1911,7 +1957,7 @@
 			ts1config = <0x0>;
 			ts2config = <0x0>;
 			ts3config = <0x0>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		sunxi_thermal_sensor:thermal_sensor{
@@ -2134,6 +2180,7 @@
 			gmac-power0;
 			gmac-power1;
 			gmac-power2;
+			device_type = "gmac0";
 			status = "disable";
 		};
 	};
@@ -2146,6 +2193,9 @@
 		interrupt-names = "GPU", "JOB", "MMU";
 		clocks = <&clk_pll_gpu>, <&clk_gpu>;
 		clock-names = "clk_parent", "clk_mali";
+		gpu_idle = <1>;
+		independent_power = <1>;
+		dvfs_status = <1>;
 		operating-points = <
 			/* KHz   uV */
 			756000 1040000

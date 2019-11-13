@@ -1039,12 +1039,15 @@ s32 hdmi_init(void)
 	if (IS_ERR(hdmi_drv->pctl))
 		pr_err("ERROR: pinctrl_get for HDMI2.0 DDC fail\n");
 
-	hdmi_drv->ddc_ctrl.gpio = of_get_named_gpio_flags(pdev->dev.of_node, "ddc_io_ctrl", 0,
-				(enum of_gpio_flags *)(&(hdmi_drv->ddc_ctrl)));
+	if (hdmi_drv->ddc_ctrl_en == 1)
+	{
+		hdmi_drv->ddc_ctrl.gpio = of_get_named_gpio_flags(pdev->dev.of_node, "ddc_io_ctrl", 0,
+			(enum of_gpio_flags *)(&(hdmi_drv->ddc_ctrl)));
 
-	if (gpio_request(hdmi_drv->ddc_ctrl.gpio, NULL) != 0) {
-		pr_info("ddc ctrl gpio_request is failed\n");
-		return 0;
+		if (gpio_request(hdmi_drv->ddc_ctrl.gpio, NULL) != 0) {
+			pr_info("ddc ctrl gpio_request is failed\n");
+			return 0;
+		}
 	}
 
 	/**********************get dts clk configs****************************/

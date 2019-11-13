@@ -8,6 +8,10 @@ if [ -n "`echo ${LICHEE_CHIP} | grep "sun5[0-9]i"`" ] && \
         [ "x${LICHEE_ARCH}" = "xarm64" ]; then
     export ARCH=arm64
     export CROSS_COMPILE=aarch64-linux-gnu-
+elif [ -n "`echo ${LICHEE_CHIP} | grep "tm3"`" ] && \
+        [ "x${LICHEE_ARCH}" = "xarm64" ]; then
+    export ARCH=arm64
+    export CROSS_COMPILE=aarch64-linux-gnu-
 fi
 
 if [ -n "${LICHEE_TOOLCHAIN_PATH}" \

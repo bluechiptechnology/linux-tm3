@@ -74,6 +74,7 @@ clocks {
 			lock-mode = "new";
 			clock-output-names = "pll_video0";
 		};
+
 		clk_pll_video1: pll_video1 {
 			#clock-cells = <0>;
 			compatible = "allwinner,pll-clock";
@@ -164,6 +165,7 @@ clocks {
 			clocks = <&clk_pll_video0>;
 			clock-mult = <4>;
 			clock-div = <1>;
+			flags = <4>;
 			clock-output-names = "pll_video0x4";
 		};
 		clk_pll_video1x4: pll_video1x4 {

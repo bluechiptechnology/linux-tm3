@@ -280,3 +280,7 @@ config EZNPS_GIC
 config STM32_EXTI
 	bool
 	select IRQ_DOMAIN
+
+config IRQ_GPIO_POLL
+	bool "Single IRQ triggered on GPIO poll"
+	depends on OF_IRQ

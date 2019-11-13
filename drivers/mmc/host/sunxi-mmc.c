@@ -780,7 +780,7 @@ static irqreturn_t sunxi_mmc_handle_bottom_half(int irq, void *dev_id)
 		 */
 		sunxi_mmc_send_manual_stop(host, mrq_stop);
 		if (gpio_is_valid(host->card_pwr_gpio))
-			gpio_set_value(host->card_pwr_gpio,
+			gpio_set_value_cansleep(host->card_pwr_gpio,
 				       (host->
 					ctl_spec_cap &
 					CARD_PWR_GPIO_HIGH_ACTIVE) ? 0 : 1);
@@ -1010,12 +1010,14 @@ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	WARN_ON(ios->bus_mode >= ARRAY_SIZE(bus_mode));
 	WARN_ON(ios->power_mode >= ARRAY_SIZE(pwr_mode));
 	WARN_ON(ios->timing >= ARRAY_SIZE(timing));
+	/*
 	dev_info(mmc_dev(mmc),
 		 "sdc set ios:clk %dHz bm %s pm %s vdd %d width %d timing %s dt %s\n",
 		 ios->clock, bus_mode[ios->bus_mode],
 		 pwr_mode[ios->power_mode], ios->vdd,
 		 1 << ios->bus_width, timing[ios->timing],
 		 drv_type[ios->drv_type]);
+		 */
 
 	/* Set the power state */
 	switch (ios->power_mode) {
@@ -1050,7 +1052,8 @@ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 				return;
 			}
 		}
-		if (!IS_ERR(mmc->supply.vqmmc18sw)) {
+		if (!IS_ERR(mmc->supply.vqmmc18sw)) 
+		{
 			rval = regulator_enable(mmc->supply.vqmmc18sw);
 			if (rval < 0) {
 				dev_err(mmc_dev(mmc),
@@ -1059,13 +1062,14 @@ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			}
 		}
 
-
-
 		if (gpio_is_valid(host->card_pwr_gpio))
-			gpio_set_value(host->card_pwr_gpio,
-				       (host->
+		{
+			printk("gpio_is_valid: %d\r\n", host->card_pwr_gpio);
+			gpio_set_value_cansleep(host->card_pwr_gpio,
+				(host->
 					ctl_spec_cap &
 					CARD_PWR_GPIO_HIGH_ACTIVE) ? 1 : 0);
+		}
 
 		if (!IS_ERR(host->pins_default)) {
 			rval =
@@ -1132,7 +1136,7 @@ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		}
 
 		if (gpio_is_valid(host->card_pwr_gpio))
-			gpio_set_value(host->card_pwr_gpio,
+			gpio_set_value_cansleep(host->card_pwr_gpio,
 				       (host->
 					ctl_spec_cap &
 					CARD_PWR_GPIO_HIGH_ACTIVE) ? 0 : 1);
@@ -1566,8 +1570,7 @@ static int sunxi_mmc_regulator_get_supply(struct mmc_host *mmc)
 	for (i = 0; i < ARRAY_SIZE(pwr_str); i++) {
 		prop = of_find_property(np, pwr_str[i], NULL);
 		if (!prop) {
-			dev_info(dev, "Can't get %s regulator string\n",
-				 pwr_str[i]);
+			//dev_info(dev, "Can't get %s regulator string\n", pwr_str[i]);
 			continue;
 		}
 		reg_str[i] = devm_kzalloc(&mmc->class_dev, prop->length,
@@ -1617,7 +1620,7 @@ static int sunxi_mmc_regulator_get_supply(struct mmc_host *mmc)
 	mmc->supply.vqmmc33sw = regulator_get(NULL, reg_str[5]);
 	mmc->supply.vqmmc18sw = regulator_get(NULL, reg_str[6]);
 	if (IS_ERR(mmc->supply.vmmc)) {
-		dev_info(dev, "No vmmc regulator found\n");
+		//dev_info(dev, "No vmmc regulator found\n");
 	} else {
 		ret = mmc_regulator_get_ocrmask(mmc->supply.vmmc);
 		if (ret > 0)
@@ -1626,23 +1629,33 @@ static int sunxi_mmc_regulator_get_supply(struct mmc_host *mmc)
 			dev_warn(dev, "Failed getting OCR mask: %d\n", ret);
 	}
 
-	if (IS_ERR(mmc->supply.vqmmc))
-		dev_info(dev, "No vqmmc regulator found\n");
+	//if (IS_ERR(mmc->supply.vqmmc))
+	//	dev_info(dev, "No vqmmc regulator found\n");
 
-	if (IS_ERR(mmc->supply.vdmmc))
-		dev_info(dev, "No vdmmc regulator found\n");
+	//if (IS_ERR(mmc->supply.vdmmc))
+	//	dev_info(dev, "No vdmmc regulator found\n");
 
-	if (IS_ERR(mmc->supply.vdmmc33sw))
-		dev_info(dev, "No vd33sw regulator found\n");
+	//if (IS_ERR(mmc->supply.vdmmc33sw))
+	//	dev_info(dev, "No vd33sw regulator found\n");
 
 	if (IS_ERR(mmc->supply.vdmmc18sw))
-		dev_info(dev, "No vd18sw regulator found\n");
+	{
+		if (reg_str[4] != NULL)
+		{
+			dev_info(dev, "No vd18sw regulator found, but one specified. Probe defer\n");
+			return -EPROBE_DEFER;
+		}
+		//else
+		//{
+		//	dev_info(dev, "No vd18sw regulator found\n");
+		//}
+	}
 
-	if (IS_ERR(mmc->supply.vqmmc33sw))
-		dev_info(dev, "No vq33sw regulator found\n");
+	//if (IS_ERR(mmc->supply.vqmmc33sw))
+	//	dev_info(dev, "No vq33sw regulator found\n");
 
-	if (IS_ERR(mmc->supply.vqmmc18sw))
-		dev_info(dev, "No vq18sw regulator found\n");
+	//if (IS_ERR(mmc->supply.vqmmc18sw))
+	//	dev_info(dev, "No vq18sw regulator found\n");
 
 	return 0;
 }
@@ -1978,6 +1991,7 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 			dev_err(&pdev->dev, "No sdmmc device,check dts\n");
 		}
 		sunxi_mmc_init_priv_v4p1x(host, pdev, phy_index);
+		host->mmc->index = phy_index;
 	}
 
 	if ((of_device_is_compatible(np,
@@ -2004,6 +2018,7 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 			dev_err(&pdev->dev, "No sdmmc device,check dts\n");
 
 		sunxi_mmc_init_priv_v4p00x(host, pdev, phy_index);
+		host->mmc->index = phy_index;
 	}
 
 	if (of_device_is_compatible(np, "allwinner,sunxi-mmc-v4p10x")) {
@@ -2025,6 +2040,7 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 			dev_err(&pdev->dev, "No sdmmc device,check dts\n");
 
 		sunxi_mmc_init_priv_v4p10x(host, pdev, phy_index);
+		host->mmc->index = phy_index;
 	}
 
 	if (of_device_is_compatible(np, "allwinner,sunxi-mmc-v4p5x"))	{
@@ -2044,6 +2060,7 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 			dev_err(&pdev->dev, "No sdmmc device,check dts\n");
 		}
 		sunxi_mmc_init_priv_v4p5x(host, pdev, phy_index);
+		host->mmc->index = phy_index;
 	}
 
 	/*ret = mmc_regulator_get_supply(host->mmc);*/
@@ -2051,6 +2068,7 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 	if (ret) {
 		return ret;
 	}
+
 	/*Maybe in some platform,no regulator,so we set ocr_avail manully */
 	if (!host->mmc->ocr_avail)
 		host->mmc->ocr_avail =
@@ -2077,7 +2095,10 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 		}
 	}
 
-	if (!IS_ERR(host->mmc->supply.vdmmc18sw)) {
+	if (!IS_ERR(host->mmc->supply.vdmmc18sw)) 
+	{
+		printk("regulator_enable: vdmmc18sw\r\n");
+
 		ret = regulator_enable(host->mmc->supply.vdmmc18sw);
 		if (ret < 0) {
 			dev_err(mmc_dev(host->mmc),
@@ -2086,17 +2107,20 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 		}
 	}
 
-
-	host->card_pwr_gpio =
-	    of_get_named_gpio_flags(np, "card-pwr-gpios", 0,
-				    (enum of_gpio_flags *)&flags);
-	if (gpio_is_valid(host->card_pwr_gpio)) {
-		ret =
-		    devm_gpio_request_one(&pdev->dev, host->card_pwr_gpio,
-					  GPIOF_DIR_OUT, "card-pwr-gpios");
+	printk("of_get_named_gpio_flags card-pwr-gpios\r\n");
+	host->card_pwr_gpio = of_get_named_gpio_flags(np, "card-pwr-gpios", 0, (enum of_gpio_flags *)&flags);
+	if (gpio_is_valid(host->card_pwr_gpio)) 
+	{
+		printk("gpio_is_valid\r\n");
+		ret = devm_gpio_request_one(&pdev->dev, host->card_pwr_gpio, GPIOF_DIR_OUT, "card-pwr-gpios");
 		if (ret < 0)
-			dev_err(&pdev->dev,
-				"could not get  card-pwr-gpios gpio\n");
+		{
+			dev_err(&pdev->dev, "could not get  card-pwr-gpios gpio\n");
+		}
+		else
+		{
+			gpio_set_value_cansleep(host->card_pwr_gpio, (host->ctl_spec_cap & CARD_PWR_GPIO_HIGH_ACTIVE) ? 1 : 0);
+		}
 	}
 
 	host->pinctrl = devm_pinctrl_get(&pdev->dev);
@@ -2202,7 +2226,10 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 		else
 			dev_err(&pdev->dev, "No sdmmc device,check dts\n");
 		sunxi_mmc_init_priv_v4p6x(host, pdev, phy_index);
+		host->mmc->index = phy_index;
 	}
+
+	
 
 	host->irq = platform_get_irq(pdev, 0);
 	ret = devm_request_threaded_irq(&pdev->dev, host->irq, sunxi_mmc_irq,

@@ -475,6 +475,9 @@ static void lcd_get_sys_config(u32 disp, struct disp_lcd_cfg *lcd_cfg)
 
 static s32 lcd_clk_init(struct disp_device *lcd)
 {
+	struct clk * clkvideo0 = NULL;
+	struct clk * clkvideo0x4 = NULL;
+
 	struct disp_lcd_private_data *lcdp = disp_lcd_get_priv(lcd);
 
 	if ((lcd == NULL) || (lcdp == NULL)) {
@@ -482,7 +485,30 @@ static s32 lcd_clk_init(struct disp_device *lcd)
 		return -1;
 	}
 
-	DE_INF("lcd %d clk init\n", lcd->disp);
+	DE_INF("lcd %d clk init: %d\n", lcd->disp, lcdp->panel_info.lcd_dclk_freq);
+
+	clkvideo0 = clk_get(NULL, "pll_video0");
+	clkvideo0x4 = clk_get(NULL, "pll_video0x4");
+
+	if (clkvideo0 == NULL || IS_ERR(clkvideo0)) 
+	{
+		pr_err("pll_video0 clk get failed\n");
+	}
+
+	if (clkvideo0x4 == NULL || IS_ERR(clkvideo0x4))
+	{
+		pr_err("pll_video0x4 clk get failed\n");
+		return DIS_FAIL;
+	}
+
+	if (lcdp->panel_info.lcd_dclk_freq > 50 && clkvideo0x4 != NULL)
+	{
+		clk_set_parent(lcdp->clk, clkvideo0x4);
+	}
+	else
+	{
+		clk_set_parent(lcdp->clk, clkvideo0);
+	}
 
 	lcdp->clk_parent = clk_get_parent(lcdp->clk);
 
@@ -584,20 +610,25 @@ static s32 lcd_clk_config(struct disp_device *lcd)
 		DE_WRN("NULL hdl!\n");
 		return -1;
 	}
+
 	memset(&clk_info, 0, sizeof(struct lcd_clk_info));
-	disp_al_lcd_get_clk_info(lcd->hwdev_index, &clk_info,
-				 &lcdp->panel_info);
+	disp_al_lcd_get_clk_info(lcd->hwdev_index, &clk_info, &lcdp->panel_info);
+
 	dclk_rate = lcdp->panel_info.lcd_dclk_freq * 1000000;	/* Mhz -> hz */
+
 	if (lcdp->panel_info.lcd_if == LCD_IF_DSI) {
 		lcd_rate = dclk_rate * clk_info.dsi_div;
 		pll_rate = lcd_rate * clk_info.lcd_div;
-	} else {
+	} 
+	else {
 		lcd_rate = dclk_rate * clk_info.tcon_div;
 		pll_rate = lcd_rate * clk_info.lcd_div;
 	}
+
 	dsi_rate = pll_rate / clk_info.dsi_div;
 
-	if (lcdp->clk_parent) {
+	if (lcdp->clk_parent) 
+	{
 		clk_set_rate(lcdp->clk_parent, pll_rate);
 		pll_rate_set = clk_get_rate(lcdp->clk_parent);
 	}
@@ -609,6 +640,9 @@ static s32 lcd_clk_config(struct disp_device *lcd)
 
 	clk_set_rate(lcdp->clk, lcd_rate_set);
 	lcd_rate_set = clk_get_rate(lcdp->clk);
+
+
+
 	if (lcdp->panel_info.lcd_if == LCD_IF_DSI) {
 		if (lcdp->panel_info.lcd_dsi_if == LCD_DSI_IF_COMMAND_MODE)
 			dsi_rate_set = pll_rate_set;
@@ -640,6 +674,8 @@ static s32 lcd_clk_config(struct disp_device *lcd)
 		/*FIXME, dsi clk0 = dsi clk1(rate)*/
 		/*disp_sys_clk_set_rate(lcdp->dsi_clk[1], dsi_rate_set);*/
 	}
+
+
 	dclk_rate_set = lcd_rate_set / clk_info.tcon_div;
 	if ((pll_rate_set != pll_rate) || (lcd_rate_set != lcd_rate)
 	    || (dclk_rate_set != dclk_rate)) {

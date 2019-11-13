@@ -1762,6 +1762,8 @@ static void start_work(struct work_struct *work)
 	int screen_id;
 	int count = 0;
 
+	__inf("start_work");
+
 	num_screens = bsp_disp_feat_get_num_screens();
 	while ((g_disp_drv.inited == 0) && (count < 5)) {
 		count++;
@@ -1784,10 +1786,10 @@ static void start_work(struct work_struct *work)
 			    ("sel=%d, output_type=%d, lcd_reg=%d,hdmi_reg=%d\n",
 			     screen_id, output_type, lcd_registered,
 			     hdmi_registered);
-			if (((disp_mode == DISP_INIT_MODE_SCREEN0)
-			     && (screen_id == 0))
-			    || ((disp_mode == DISP_INIT_MODE_SCREEN1)
-				&& (screen_id == 1))) {
+			//if (((disp_mode == DISP_INIT_MODE_SCREEN0)
+			//     && (screen_id == 0))
+			 //   || ((disp_mode == DISP_INIT_MODE_SCREEN1)
+			//	&& (screen_id == 1))) {
 				if (output_type == DISP_OUTPUT_TYPE_LCD) {
 					if (lcd_registered &&
 					    bsp_disp_get_output_type(screen_id)
@@ -1813,7 +1815,7 @@ static void start_work(struct work_struct *work)
 					suspend_output_type[screen_id] =
 					    output_type;
 				}
-			}
+			//}
 		}
 	} else {
 		if ((g_disp_drv.para.boot_info.type == DISP_OUTPUT_TYPE_HDMI)
@@ -2130,6 +2132,11 @@ static s32 disp_init(struct platform_device *pdev)
 	value = disp_boot_para_parse("boot_disp");
 	value1 = disp_boot_para_parse("boot_disp1");
 	value2 = disp_boot_para_parse("boot_disp2");
+
+	value = 0x00;
+	printk("disp_init: %x %x %x\r\n", value, value1, value2);
+
+
 	output_type = (value >> 8) & 0xff;
 	output_mode = (value) & 0xff;
 

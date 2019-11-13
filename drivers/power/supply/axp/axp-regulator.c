@@ -540,6 +540,13 @@ struct regulator_dev *axp_regulator_register(struct device *dev,
 
 	rdev = regulator_register(&info->desc, &config);
 
+	if (init_data->num_consumer_supplies <= 1)
+	{
+		printk("%s: has no consumer supplies. Disable it\r\n", info->desc.name, info->desc.supply_name);
+		//regulator_enable(rdev->supply);
+		axp_disable(rdev);
+	}
+	
 	return rdev;
 }
 EXPORT_SYMBOL(axp_regulator_register);
@@ -612,20 +619,32 @@ static s32 regu_device_tree_do_parse(struct device_node *node,
 			pr_err("parse ldo%d from sysconfig failed\n",
 				ldo_index);
 			return -1;
-		} else {
-			if (strcmp(consumer_supply[1].supply, "none")) {
+		} 
+		else 
+		{
+			if (strcmp(consumer_supply[1].supply, "none"))
+			{
 				var = simple_strtoul(
-						consumer_supply[1].supply,
-						NULL, 10);
-				if (var > (ldo_index-1))
-					pr_err("supply rely set err\n");
+					consumer_supply[1].supply,
+					NULL, 10);
+				if (var > (ldo_index - 1))
+				{
+					pr_err("axp supply rely set err\n");
+				}
 				else
-					(*(axp_init_data+(ldo_index-1))).supply_regulator =
-					((*(axp_init_data+(var-1))).consumer_supplies)->supply;
+				{
+					(*(axp_init_data + (ldo_index - 1))).supply_regulator =
+						((*(axp_init_data + (var - 1))).consumer_supplies)->supply;
+				}
 			}
+			
 
 			supply_num = num-1;
-			(*(axp_init_data+(ldo_index-1))).num_consumer_supplies = supply_num;
+
+			axp_init_data[ldo_index - 1].num_consumer_supplies = supply_num;
+
+			//(*(axp_init_data+(ldo_index-1))).num_consumer_supplies = supply_num;
+
 
 			consumer_supply_count = kzalloc(
 				sizeof(struct axp_consumer_supply)*supply_num,

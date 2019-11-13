@@ -297,10 +297,12 @@ static int axp80x_regulator_probe(struct platform_device *pdev)
 	struct axp80x_regulators *regu_data;
 	struct axp_dev *axp_dev = dev_get_drvdata(pdev->dev.parent);
 
-	if (pdev->dev.of_node) {
+	if (pdev->dev.of_node) 
+	{
 		ret = axp_regulator_dt_parse(pdev->dev.of_node,
 					axp80x_regulator_init_data,
 					axp80x_regu_dependence);
+
 		if (ret) {
 			pr_err("%s parse device tree err\n", __func__);
 			return -EINVAL;
@@ -344,6 +346,9 @@ static int axp80x_regulator_probe(struct platform_device *pdev)
 					"failed to register regulator attr %s\n",
 					info->desc.name);
 		}
+
+		//if(regu_data->regulators[i].)
+
 	}
 
 	return 0;

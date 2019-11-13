@@ -788,11 +788,14 @@ static int sunxi_pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 
 	flags = sunxi_pcie_cutpage_spin_lock();
 
+	//printk("sunxi_pcie_rd_other_conf: %x %x %x %x\r\n", busdev, pp->cfg0_base, pp->cfg0_size, va_cfg_base);
+
 	sunxi_pcie_writel_rcl(pp, pp->cfg0_base >> PCIE_HIGH_16, PCIE_ADDR_PAGE_CFG);
 	sunxi_pcie_prog_outbound_atu(pp, PCIE_ATU_REGION_INDEX1,
 				  type, cpu_addr,
 				  busdev, cfg_size);
 	ret = sunxi_pcie_cfg_read(va_cfg_base + where, size, val);
+/*
 	for (i = 0; i < PCIE_BAR_NUM; i++) {
 		pcie_page = readl(pp->va_cfg0_base + PCI_BASE_ADDRESS_0 + i * PCIE_BAR_REG);
 		mem_base = readl(pp->dbi_base + PCI_MEMORY_BASE);
@@ -800,6 +803,11 @@ static int sunxi_pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 				== (mem_base & MEM_BASE_MASK))
 			break;
 	}
+	*/
+	
+	//printk("sunxi_pcie_rd_other_conf pcie_page: %x\r\n", pcie_page);
+    //Move PCIe memory window to MMIO. Hardcoded and must match device tree setting
+	pcie_page = 0x05500000;
 	sunxi_pcie_writel_rcl(pp, pcie_page >> PCIE_HIGH_16, PCIE_ADDR_PAGE_CFG);
 
 	sunxi_pcie_prog_outbound_atu(pp, PCIE_ATU_REGION_INDEX0,
@@ -842,14 +850,20 @@ static int sunxi_pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 	sunxi_pcie_prog_outbound_atu(pp, PCIE_ATU_REGION_INDEX1,
 				  type, cpu_addr,
 				  busdev, cfg_size);
+	//printk("sunxi_pcie_wr_other_conf: %x %x %x %x\r\n", pp->cfg0_base, where, size, val);
 	ret = sunxi_pcie_cfg_write(va_cfg_base + where, size, val);
-	for (i = 0; i < PCIE_BAR_NUM; i++) {
+
+/*	for (i = 0; i < PCIE_BAR_NUM; i++) {
 		pcie_page = readl(pp->va_cfg0_base + PCI_BASE_ADDRESS_0 + i * PCIE_BAR_REG);
 		mem_base = readl(pp->dbi_base + PCI_MEMORY_BASE);
 		if (((pcie_page >> MEM_BASE_LEN) & MEM_BASE_MASK)
 				== (mem_base & MEM_BASE_MASK))
 			break;
 	}
+	*/
+
+	//printk("sunxi_pcie_wr_other_conf pcie_page: %x\r\n", pcie_page);
+	pcie_page = 0x05500000;
 	sunxi_pcie_writel_rcl(pp, pcie_page >> PCIE_HIGH_16, PCIE_ADDR_PAGE_CFG);
 
 	sunxi_pcie_prog_outbound_atu(pp, PCIE_ATU_REGION_INDEX0,

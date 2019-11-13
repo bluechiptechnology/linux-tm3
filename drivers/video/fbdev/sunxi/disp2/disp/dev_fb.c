@@ -818,7 +818,13 @@ static int sunxi_fb_blank(int blank_mode, struct fb_info *info)
 			struct disp_layer_config config;
 			struct disp_manager *mgr = g_disp_drv.mgr[sel];
 
-			if (blank_mode == FB_BLANK_POWERDOWN) {
+			if (blank_mode != FB_BLANK_UNBLANK)
+			{
+				if (mgr->device && mgr->device->disable)
+				{
+					mgr->device->disable(mgr->device);
+				}
+
 				if (mgr && mgr->get_layer_config
 				    && mgr->set_layer_config) {
 					config.channel = chan;
@@ -828,6 +834,7 @@ static int sunxi_fb_blank(int blank_mode, struct fb_info *info)
 					mgr->set_layer_config(mgr, &config, 1);
 				}
 			} else {
+
 				if (mgr && mgr->get_layer_config
 				    && mgr->set_layer_config) {
 					config.channel = chan;
@@ -835,6 +842,11 @@ static int sunxi_fb_blank(int blank_mode, struct fb_info *info)
 					mgr->get_layer_config(mgr, &config, 1);
 					config.enable = 1;
 					mgr->set_layer_config(mgr, &config, 1);
+				}
+
+				if (mgr->device && mgr->device->enable)
+				{
+					mgr->device->enable(mgr->device);
 				}
 			}
 		}
@@ -1948,9 +1960,9 @@ s32 fb_init(struct platform_device *pdev)
 		u32 fb_num = 0;
 		struct disp_init_para *disp_init = &g_disp_drv.disp_init;
 
-		fb_num = 1;
+		fb_num = 2;
 		for (i = 0; i < fb_num; i++) {
-			u32 screen_id = g_disp_drv.disp_init.disp_mode;
+			u32 screen_id = i; // g_disp_drv.disp_init.disp_mode;
 
 			if (g_disp_drv.para.boot_info.sync)
 				screen_id = g_disp_drv.para.boot_info.disp;

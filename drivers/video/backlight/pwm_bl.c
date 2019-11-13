@@ -168,7 +168,7 @@ static int pwm_backlight_parse_dt(struct device *dev,
 		if (ret < 0)
 			return ret;
 
-		ret = of_property_read_u32(node, "default-brightness-level",
+		ret = of_property_read_u32(node, "defaultbrightnesslevel",
 					   &value);
 		if (ret < 0)
 			return ret;

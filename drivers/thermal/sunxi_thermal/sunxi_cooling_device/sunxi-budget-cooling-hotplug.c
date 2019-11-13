@@ -70,8 +70,7 @@ int __ref sunxi_hotplug_update_state(struct sunxi_budget_cooling_device
 	    (hotplug->cluster_num_floor[cluster] >=
 	     max) ? max : hotplug->cluster_num_floor[cluster];
 #ifdef CONFIG_CPU_AUTOHOTPLUG_ROOMAGE
-	pr_info("CPU Budget hotplug: cluster%d min:%d max:%d\n", cluster, min,
-		max);
+	//pr_info("CPU Budget hotplug: cluster%d min:%d max:%d\n", cluster, min,max);
 	ret = autohotplug_roomage_limit(cluster, min, max);
 #endif
 

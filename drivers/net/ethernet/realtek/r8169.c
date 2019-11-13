@@ -8246,11 +8246,13 @@ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 		goto err_out_mwi_2;
 	}
 
+	/*
 	rc = pci_request_regions(pdev, MODULENAME);
 	if (rc < 0) {
 		netif_err(tp, probe, dev, "could not request regions\n");
 		goto err_out_mwi_2;
 	}
+	*/
 
 	/* ioremap MMIO region */
 	ioaddr = ioremap(pci_resource_start(pdev, region), R8169_REGS_SIZE);

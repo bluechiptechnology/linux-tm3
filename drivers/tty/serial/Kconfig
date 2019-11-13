@@ -1698,6 +1698,15 @@ config SERIAL_SUNXI_EARLYCON
 	default n
 	help
 	  Enable earlycon with boot step. If enable earlycon, kernel cmd (earlycon=uart0,addr) must be add.
+	  
+config SERIAL_EXAR_XRM117X	
+	bool "Support for Exar XRM117X UART and GPIO controller"
+	depends on SPI 
+	select SERIAL_CORE
+	select GPIOLIB_IRQCHIP
+	help
+	  XRM117X chip support
+
 endmenu
 
 config SERIAL_MCTRL_GPIO

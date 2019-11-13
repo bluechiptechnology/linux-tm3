@@ -36,7 +36,7 @@
 #endif
 
 #define CPUFREQ_DBG(format, args...)	\
-	pr_debug("[cpu_freq] DBG: "format, ##args)
+	printk("[cpu_freq] DBG: "format, ##args)
 #define CPUFREQ_ERR(format, args...)	\
 	pr_err("[cpu_freq] ERR: "format, ##args)
 

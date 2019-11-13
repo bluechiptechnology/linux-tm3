@@ -746,16 +746,39 @@ static void igb_cache_ring_register(struct igb_adapter *adapter)
 	}
 }
 
+extern int sunxi_pcie_cutpage_base(u32 bar_base);
+extern void sunxi_pcie_cutpage_spin_unlock(unsigned long flags);
+extern unsigned long sunxi_pcie_cutpage_spin_lock(void);
+
 u32 igb_rd32(struct e1000_hw *hw, u32 reg)
 {
 	struct igb_adapter *igb = container_of(hw, struct igb_adapter, hw);
 	u8 __iomem *hw_addr = ACCESS_ONCE(hw->hw_addr);
 	u32 value = 0;
+	unsigned long cutpageflags = 0;
 
 	if (E1000_REMOVED(hw_addr))
 		return ~value;
 
-	value = readl(&hw_addr[reg]);
+	if (reg > 0x10000)
+	{
+		printk("Changing PCIe cutpage\r\n");
+		cutpageflags = sunxi_pcie_cutpage_spin_lock();
+
+		sunxi_pcie_cutpage_base(hw->io_base + 0x10000);
+
+		value = readl(&hw_addr[reg - 0x10000]);
+
+		sunxi_pcie_cutpage_base(hw->io_base);
+
+		sunxi_pcie_cutpage_spin_unlock(cutpageflags);
+	}
+	else
+	{
+		value = readl(&hw_addr[reg]);
+	}
+
+	//printk("igb_rd32: hw->hw_addr: %x %x\r\n", reg, value);
 
 	/* reads should not return all F's */
 	if (!(~value) && (!reg || !(~readl(hw_addr)))) {
@@ -1106,6 +1129,9 @@ static void igb_set_interrupt_capability(struct igb_adapter *adapter, bool msix)
 {
 	int err;
 	int numvecs, i;
+
+	//DPR H6 PCIe driver does not seem to handle MSI-X interrupts 
+	msix = false;
 
 	if (!msix)
 		goto msi_only;
@@ -2313,7 +2339,7 @@ static int igb_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	s32 ret_val;
 	static int global_quad_port_a; /* global quad port a indication */
 	const struct e1000_info *ei = igb_info_tbl[ent->driver_data];
-	int err, pci_using_dac;
+	int err, pci_using_dac, bar0physical;
 	u8 part_str[E1000_PBANUM_LENGTH];
 
 	/* Catch broken hardware that put the wrong VF device ID in
@@ -2342,9 +2368,11 @@ static int igb_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		}
 	}
 
+	/*
 	err = pci_request_mem_regions(pdev, igb_driver_name);
 	if (err)
 		goto err_pci_reg;
+		*/
 
 	pci_enable_pcie_error_reporting(pdev);
 
@@ -2368,9 +2396,18 @@ static int igb_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	adapter->msg_enable = netif_msg_init(debug, DEFAULT_MSG_ENABLE);
 
 	err = -EIO;
+
+
+	pci_read_config_dword(pdev, PCI_BASE_ADDRESS_0, &bar0physical);
+
+	hw->io_base = bar0physical;
+
 	adapter->io_addr = pci_iomap(pdev, 0, 0);
 	if (!adapter->io_addr)
+	{
+		printk("igb: pci_iomap failed: %x\r\n", adapter->io_addr);
 		goto err_ioremap;
+	}
 	/* hw->hw_addr can be altered, we'll use adapter->io_addr for unmap */
 	hw->hw_addr = adapter->io_addr;
 

@@ -363,6 +363,12 @@ int disp_al_lcd_get_clk_info(u32 screen_id, struct lcd_clk_info *info,
 		}
 	}
 
+	//DPR support for 4.3"
+	if (panel->lcd_if == LCD_IF_HV && panel->lcd_dclk_freq < 15)
+	{
+		tcon_div = 12;
+	}
+
 #if !defined(DSI_VERSION_28)
 	if (panel->lcd_if == LCD_IF_DSI) {
 		u32 lane = panel->lcd_dsi_lane;
@@ -884,6 +890,8 @@ int disp_al_vdevice_cfg(u32 screen_id, struct disp_video_timings *video_info,
 {
 	struct lcd_clk_info clk_info;
 	struct disp_panel_para info;
+
+	printk("disp_al_vdevice_cfg: %d\r\n", para->sub_intf);
 
 	if (para->sub_intf == LCD_HV_IF_CCIR656_2CYC)
 		al_priv.output_type[screen_id] = (u32) DISP_OUTPUT_TYPE_TV;

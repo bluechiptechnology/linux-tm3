@@ -408,6 +408,13 @@ static int sunxi_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	temp = SET_BITS(reg_shift, 1, temp, 0);
 	sunxi_pwm_writel(chip, reg_offset, temp);
 
+	/*DPR default to active high*/
+	reg_offset = pc->config[pwm->pwm - chip->base].reg_polarity_offset;
+	reg_shift = pc->config[pwm->pwm - chip->base].reg_polarity_shift;
+	temp = sunxi_pwm_readl(chip, reg_offset);
+	temp = SET_BITS(reg_shift, 1, temp, 1);
+	sunxi_pwm_writel(chip, reg_offset, temp);
+
 	if (period_ns < 10667)
 		freq = 93747;
 	else if (period_ns > 1000000000)

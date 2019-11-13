@@ -1650,6 +1650,8 @@ int init_sys_pwr_dm(void)
 	axp_add_sys_pwr_dm("vcc-pll");
 	axp_add_sys_pwr_dm("vcc-pc");
 
+	axp_add_sys_pwr_dm("vcc-dcxoio");
+
 	return 0;
 }
 

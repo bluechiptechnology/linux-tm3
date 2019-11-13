@@ -80,6 +80,8 @@ static s32 vdevice_clk_config(struct disp_device *vdevice)
 	unsigned long pll_rate, lcd_rate, dclk_rate;	/* hz */
 	unsigned long pll_rate_set, lcd_rate_set, dclk_rate_set;	/* hz */
 
+	printk("vdevice_clk_config\r\n");
+
 	if (!vdevice || !vdevicep) {
 		DE_WRN("null hdl!\n");
 		return DIS_FAIL;
@@ -604,6 +606,8 @@ static s32 disp_vdevice_tcon_enable(struct disp_device *vdevice)
 	    disp_vdevice_get_priv(vdevice);
 	struct disp_manager *mgr = NULL;
 
+	printk("disp_vdevice_tcon_enable\r\n");
+
 	if ((vdevice == NULL) || (vdevicep == NULL)) {
 		DE_WRN("null  hdl!\n");
 		return DIS_FAIL;
@@ -698,6 +702,8 @@ static s32 disp_vdevice_tcon_simple_enable(struct disp_device *vdevice)
 {
 	struct disp_vdevice_private_data *vdevicep =
 	    disp_vdevice_get_priv(vdevice);
+
+	printk("disp_vdevice_tcon_simple_enable\r\n");
 
 	if ((vdevice == NULL) || (vdevicep == NULL)) {
 		DE_WRN("null  hdl!\n");

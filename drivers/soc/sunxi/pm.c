@@ -22,7 +22,7 @@
 #include <asm/io.h>
 #include <asm/cacheflush.h>
 #include "pm.h"
-static unsigned long time_to_wakeup_ms;
+static unsigned long time_to_wakeup_ms = 0;
 module_param_named(time_to_wakeup_ms, time_to_wakeup_ms,
 	ulong, S_IRUGO | S_IWUSR);
 
@@ -91,6 +91,8 @@ static int sunxi_suspend_valid(suspend_state_t state)
 
 static int __sunxi_suspend_enter(void)
 {
+	//enable_gpio_wakeup_src(384);
+
 	super_standby_para->event |= CPUS_MEM_WAKEUP;
 
 	if (time_to_wakeup_ms > 0) {
@@ -265,20 +267,22 @@ static extended_standby_t sun50iw3_usbstandby = {
 static extended_standby_t sun50iw6_superstandby = {
 	.id = 0x8,
 	.soc_pwr_dm_state.state =
-		BIT(VCC_DRAM_BIT) |
 		BIT(VDD_CPUS_BIT) |
 		BIT(VCC_LPDDR_BIT) |
 		BIT(VCC_PL_BIT) |
 		BIT(VDD_SYS_BIT) |
-		BIT(VCC_PLL_BIT),
-	.soc_pwr_dm_state.volt[0]      = 0x0,
+	    //BIT(VCC_IO_BIT) |
+		//BIT(VCC_PLL_BIT),
+		BIT(VCC_DRAM_BIT),
+	.soc_pwr_dm_state.volt[0] = 0x0,
+	.soc_pwr_dm_state.volt[VDD_SYS_BIT] = 600,
 	.cpux_clk_state.osc_en         = 0x0,
 	.cpux_clk_state.init_pll_dis   = BIT(PM_PLL_DRAM),
 	.cpux_clk_state.exit_pll_en    = 0x0,
 	.cpux_clk_state.pll_change     = 0x0,
 	.cpux_clk_state.bus_change     = 0x0,
 	.soc_dram_state.selfresh_flag = 0x1,
-	.soc_io_state.hold_flag = 0x1,
+	.soc_io_state.hold_flag = 0x0,
 	/* for pf port: set the io to disable state.; */
 	.soc_io_state.io_state[0] = {0x0300b074, 0x0ffff000, 0x07777000},
 	.soc_io_state.io_state[1] = {0x0300b074, 0x00000000, 0x00000000},
@@ -494,7 +498,14 @@ static int __init sunxi_suspend_init(void)
 		(1 << DM_LPDDR) |
 		(1 << DM_PL) |
 		(1 << DM_PLL) |
-		(1 << DM_IO);
+		(1 << DM_IO) |
+		(1 << DM_VPU) |
+		(1 << DM_DRAMPLL) |
+		(1 << DM_PM) |
+		(1 << DM_CPVDD) |
+		(1 << DM_LDOIN) |
+		(1 << DM_TEST);
+
 	standby_space_size = value[2];
 	super_standby_para->event = 0;
 

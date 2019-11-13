@@ -375,6 +375,8 @@ s32 tcon_get_timing(u32 sel, u32 index, struct disp_video_timings *tt)
 	u32 lcd_if = 0, lcd_hv_if = 0;
 	u32 b_interlace = 0;
 
+	printk("tcon_get_timing: %d\r\n", lcd_dev[sel]->tcon0_hv_ctl.bits.hv_mode);
+
 	if (index == 0) {
 		lcd_if = lcd_dev[sel]->tcon0_ctl.bits.tcon0_if;
 		lcd_hv_if = lcd_dev[sel]->tcon0_hv_ctl.bits.hv_mode;
@@ -715,7 +717,9 @@ static s32 tcon0_cfg_mode_tri(u32 sel, struct disp_panel_para *panel)
 
 s32 tcon0_cfg(u32 sel, struct disp_panel_para *panel)
 {
-	if ((panel->lcd_if == LCD_IF_HV) || (panel->lcd_if == LCD_IF_EXT_DSI)) {
+	printk("tcon0_cfg: %d %d %d\r\n", panel->lcd_if, panel->lcd_hv_if, panel->lcd_hv_clk_phase);
+	if ((panel->lcd_if == LCD_IF_HV) || (panel->lcd_if == LCD_IF_EXT_DSI)) 
+	{
 		lcd_dev[sel]->tcon0_ctl.bits.tcon0_if = 0;
 		lcd_dev[sel]->tcon0_hv_ctl.bits.hv_mode = panel->lcd_hv_if;
 		lcd_dev[sel]->tcon0_hv_ctl.bits.srgb_seq =

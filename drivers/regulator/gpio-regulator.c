@@ -253,17 +253,26 @@ static int gpio_regulator_probe(struct platform_device *pdev)
 	struct regulator_config cfg = { };
 	int ptr, ret, state;
 
+	printk("gpio_regulator_probe2\r\n");
+
 	drvdata = devm_kzalloc(&pdev->dev, sizeof(struct gpio_regulator_data),
 			       GFP_KERNEL);
 	if (drvdata == NULL)
 		return -ENOMEM;
 
-	if (np) {
+	printk("gpio_regulator_probe2\r\n");
+
+	if (np) 
+	{
+		printk("gpio_regulator_probe3\r\n");
+
 		config = of_get_gpio_regulator_config(&pdev->dev, np,
 						      &drvdata->desc);
 		if (IS_ERR(config))
 			return PTR_ERR(config);
 	}
+
+	printk("gpio_regulator_probe4\r\n");
 
 	drvdata->desc.name = kstrdup(config->supply_name, GFP_KERNEL);
 	if (drvdata->desc.name == NULL) {
@@ -291,6 +300,8 @@ static int gpio_regulator_probe(struct platform_device *pdev)
 			goto err_memgpio;
 		}
 	}
+
+	printk("gpio_regulator_probe5\r\n");
 
 	drvdata->states = kmemdup(config->states,
 				  config->nr_states *
@@ -335,6 +346,8 @@ static int gpio_regulator_probe(struct platform_device *pdev)
 	cfg.init_data = config->init_data;
 	cfg.driver_data = drvdata;
 	cfg.of_node = np;
+
+	printk("gpio_regulator_probe6: %d\r\n", config->enable_gpio);
 
 	if (gpio_is_valid(config->enable_gpio)) {
 		cfg.ena_gpio = config->enable_gpio;

@@ -452,6 +452,8 @@ static s32 tv_get_interface_para(void *para)
 {
 	struct disp_vdevice_interface_para intf_para;
 
+	printk("tv_get_interface_para\r\n");
+
 	intf_para.intf = 0;
 	intf_para.sub_intf = 12;
 	intf_para.sequence = 0;
@@ -792,6 +794,9 @@ static int tv_ac200_init(void)
 		pr_info("%s: ac200 disable, skip init\n", __func__);
 		return -1;
 	}
+
+	//DPR Force TV disabled for now
+	return -1;
 
 	ret = platform_driver_register(&tv_ac200_driver);
 	if (ret)
