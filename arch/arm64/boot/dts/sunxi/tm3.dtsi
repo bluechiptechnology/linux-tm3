@@ -64,6 +64,7 @@
 		interrupt-controller;
 		#interrupt-cells = <2>;
 		gpio = <&pio PC 16 0 0 1 0>;
+		status = "disabled";
 	};
 
 };
@@ -155,6 +156,42 @@
 		allwinner,drive = <1>;
 		allwinner,pull = <1>;
 	};
+
+	sdc2_pins_sdr: sdc2@0 {
+		allwinner,pins = "PC4", "PC5", "PC6",
+					"PC7", "PC8", "PC9", "PC10",
+					"PC11", "PC12", "PC13", "PC14";
+		allwinner,function = "sdc2";
+		allwinner,muxsel = <3>;
+		allwinner,drive = <2>;
+		allwinner,pull = <0>;
+	};
+
+	sdc2_pins_cmd: sdc2@1 {
+		allwinner,pins = "PC5";
+		allwinner,function = "sdc2";
+		allwinner,muxsel = <3>;
+		allwinner,drive = <2>;
+		allwinner,pull = <1>;
+	};
+
+	sdc2_pins_ds: sdc2@2 {
+		allwinner,pins = "PC1";
+		allwinner,function = "sdc2";
+		allwinner,muxsel = <3>;
+		allwinner,drive = <2>;
+		allwinner,pull = <2>;
+	};
+
+	sdc2_pins_sleep: sdc3@2 {
+		allwinner,pins = "PC1", "PC4", "PC5", "PC6",
+					"PC7", "PC8", "PC9", "PC10",
+					"PC11", "PC12", "PC13", "PC14";
+		allwinner,function = "io_disabled";
+		allwinner,muxsel = <7>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
+	};
 };
 
 
@@ -212,11 +249,13 @@
 		card_ctrl = <0x2>;
 		card_high_speed = <0x1>;
 		card_line = <0x8>;
-		pinctrl-0 = <&sdc2_pins_a>;
-		sdc_ex_dly_used = <0x2>;
+		pinctrl-0 = <&sdc2_pins_sdr>;
+		pinctrl-1 = <&sdc2_pins_cmd>;
+		pinctrl-2 = <&sdc2_pins_ds>;
+		sdc_ex_dly_used = <0x2>; //auto tune
 		sdc_io_1v8 = <0x1>;
-		sdc_tm4_hs400_max_freq = <0xC8>;
-		sdc_tm4_hs200_max_freq = <0x96>;
+		sdc_tm4_hs400_max_freq = <100>;
+		sdc_tm4_hs200_max_freq = <150>;
 	};
 
 	product {
@@ -435,15 +474,18 @@
 			<&clk_sdmmc2_bus>,
 			<&clk_sdmmc2_rst>;
 	clock-names = "osc24m","pll_periph","mmc","ahb","rst";
-	pinctrl-names = "default","sleep";
-	pinctrl-0 = <&sdc2_pins_a>;
-	pinctrl-1 = <&sdc2_pins_b>;
+	pinctrl-names = "default", "tm3acmd", "tm3ads", "sleep";
+	pinctrl-0 = <&sdc2_pins_sdr>;
+	pinctrl-1 = <&sdc2_pins_cmd>;
+	pinctrl-2 = <&sdc2_pins_ds>;
+	pinctrl-3 = <&sdc2_pins_sleep>;
 	bus-width = <8>;
+	sunxi-dis-signal-vol-sw;
 	mmc-ddr-1_8v;
-	//mmc-hs200-1_8v;
-	//mmc-hs400-1_8v;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
 	non-removable;
-	max-frequency = <100000000>;
+	max-frequency = <150000000>;
 	cap-sd-highspeed;
 	cap-mmc-highspeed;
 	cap-erase;
@@ -470,10 +512,10 @@
 	sdc_tm4_sm1_freq1 = <0>;
 	sdc_tm4_sm2_freq0 = <0x00000000>;
 	sdc_tm4_sm2_freq1 = <0>;
-	sdc_tm4_sm3_freq0 = <0x05000000>;
-	sdc_tm4_sm3_freq1 = <0x00000005>;
-	sdc_tm4_sm4_freq0 = <0x00050000>;
-	sdc_tm4_sm4_freq1 = <0x00000004>;
+	sdc_tm4_sm3_freq0 = <0x1a19ffff>;
+	sdc_tm4_sm3_freq1 = <0x00000000>;
+	sdc_tm4_sm4_freq0 = <0xe22ffff>;
+	sdc_tm4_sm4_freq1 = <0x00000608>;
 
 	/*vmmc-supply = <&reg_3p3v>;*/
 	/*vqmc-supply = <&reg_3p3v>;*/
@@ -481,7 +523,7 @@
 	/*vmmc = "vcc-card";*/
 	/*vqmc = "";*/
 	/*vdmc = "";*/
-	/*sunxi-power-save-mode;*/
+	sunxi-power-save-mode;
 	status = "okay";
 };
 
@@ -573,8 +615,8 @@
 	regulator7 = "axp806_aldo2 none";
 	regulator8 = "axp806_aldo3 none";
 	regulator9 = "axp806_bldo1 none vcc-pc vcc-emmc-18 vdd-efuse vcc-pcie vcc-hdmi vcc-pl";
-	regulator10 = "axp806_bldo2 none vcc-pm";
-	regulator11 = "axp806_bldo3 none vdd-dram-18 vdd-bias vcc-pll vcc-io";
+	regulator10 = "axp806_bldo2 none vdd-dram-18 vdd-bias vcc-pll";
+	regulator11 = "axp806_bldo3 none vcc-io";
 	regulator12 = "axp806_bldo4 none";
 	regulator13 = "axp806_cldo1 none";
 	regulator14 = "axp806_cldo2 none";
@@ -599,7 +641,7 @@
 	spi0_cs_bitmap = <1>;
 	chipselect-gpios = <&pio PC 15 0 0 0 0xffffffff>;
 	usegpiocs = <1>;
-	status = "okay";
+	status = "disabled";
 
 	xr20m1172: xr20m1172uartgpio {
 			compatible = "exar,xrm117x";
@@ -670,7 +712,7 @@
 	/*sunxi-dly-104M-ddr  = <1 0 0 0 0>;*/
 	/*sunxi-dly-208M-ddr  = <1 0 0 0 0>;*/
 
-	status = "okay";
+	status = "disabled";
 
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -682,8 +724,6 @@
 
 		//pinctrl-names = "default";
 		//pinctrl-0 = <&wilink_int>;
-
-		
 
 		interrupt-parent = <&wlanpolledirq>;
 		interrupts = <0 IRQ_TYPE_LEVEL_HIGH>; /* gpio7 */

@@ -275,7 +275,7 @@ static extended_standby_t sun50iw6_superstandby = {
 		//BIT(VCC_PLL_BIT),
 		BIT(VCC_DRAM_BIT),
 	.soc_pwr_dm_state.volt[0] = 0x0,
-	.soc_pwr_dm_state.volt[VDD_SYS_BIT] = 600,
+	.soc_pwr_dm_state.volt[VDD_SYS_BIT] = 800,
 	.cpux_clk_state.osc_en         = 0x0,
 	.cpux_clk_state.init_pll_dis   = BIT(PM_PLL_DRAM),
 	.cpux_clk_state.exit_pll_en    = 0x0,

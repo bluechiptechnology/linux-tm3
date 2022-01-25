@@ -552,8 +552,13 @@ static void acx00_codec_init(struct snd_soc_codec *codec)
 			(7<<I2S_FMT_SLOT_WIDTH), (7<<I2S_FMT_SLOT_WIDTH));
 
 	/* default setting 0xA0A0 for ADC & DAC Volume */
-	snd_soc_write(codec, AC_I2S_DAC_VOL, ACX00_DEF_VOL);
+	snd_soc_write(codec, AC_I2S_DAC_VOL, 0xB0B0);
 	snd_soc_write(codec, AC_I2S_ADC_VOL, ACX00_DEF_VOL);
+
+        //snd_soc_write(codec, AC_LINEOUT_CTL, ACX00_DEF_VOL);
+
+
+
 
 	/* Enable HPF for high pass filter */
 	snd_soc_update_bits(codec, AC_DAC_CTL,

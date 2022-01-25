@@ -8,6 +8,19 @@ cp arch/arm64/boot/Image /tftpboot/
 cp ./arch/arm64/boot/dts/sunxi/tm3-hb5.dtb /tftpboot/tm3.dtb
 
 
-cp ./arch/arm64/boot/dts/sunxi/tm3-hb5.dtb /embedded/projects/tm3/lichee/out/tm3/android/common/sunxi.dtb
-#cp ./arch/arm64/boot/dts/sunxi/tm3-tmxdevboard.dtb /embedded/projects/tm3/lichee/out/tm3/android/common/sunxi.dtb
+#cp ./arch/arm64/boot/dts/sunxi/tm3-hb5.dtb /embedded/projects/tm3/lichee/out/tm3/android/common/sunxi.dtb
+#cp ./arch/arm64/boot/dts/sunxi/tm3-tmxdevboard.dtb ${LICHEE_OUT}/sunxi.dtb
+#cp ./arch/arm64/boot/dts/sunxi/tm3-hb5.dtb ${LICHEE_OUT}/sunxi.dtb
+cp arch/arm64/boot/Image ${LICHEE_OUT}/
 cp arch/arm64/boot/Image /nfs/rootfs/opt/boot/
+
+cd ${AWPACKTOOL}
+set +e
+pack -ctm3 -plinux -bhb5 -duart0
+set -e
+cd -
+
+echo Copy firmware to nfs
+cp ${AWPACKTOOL}/out/boot0_sdcard.fex /nfs/rootfs/opt/boot/boot0.bin
+cp ${AWPACKTOOL}/out/boot_package.fex /nfs/rootfs/opt/boot/uboot.bin
+

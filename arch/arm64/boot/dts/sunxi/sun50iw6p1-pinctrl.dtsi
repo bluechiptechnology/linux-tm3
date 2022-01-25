@@ -421,7 +421,7 @@
 						 "PC11", "PC12", "PC13", "PC14";
 				allwinner,function = "sdc2";
 				allwinner,muxsel = <3>;
-				allwinner,drive = <2>;
+				allwinner,drive = <3>;
 				allwinner,pull = <1>;
 			};
 
@@ -432,7 +432,7 @@
 				allwinner,function = "io_disabled";
 				allwinner,muxsel = <7>;
 				allwinner,drive = <1>;
-				allwinner,pull = <1>;
+				allwinner,pull = <0>;
 			};
 
 			daudio0_pins_a: daudio0@0 {

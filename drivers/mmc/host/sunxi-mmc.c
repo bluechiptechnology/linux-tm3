@@ -1082,6 +1082,18 @@ static void sunxi_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			}
 		}
 
+		if(!IS_ERR(host->pins_tm3acmd))
+		{
+			pinctrl_select_state(host->pinctrl,
+							host->pins_tm3acmd);
+		}
+
+		if(!IS_ERR(host->pins_tm3ads))
+		{
+			pinctrl_select_state(host->pinctrl,
+							host->pins_tm3ads);
+		}
+
 		if (!IS_ERR(host->clk_rst)) {
 			rval = clk_prepare_enable(host->clk_rst);
 			if (rval) {
@@ -2136,6 +2148,12 @@ static int sunxi_mmc_resource_request(struct sunxi_mmc_host *host,
 			 "could not get default pinstate,check if pin is needed\n");
 	}
 
+	host->pins_tm3acmd = pinctrl_lookup_state(host->pinctrl,
+						  "tm3acmd");
+
+	host->pins_tm3ads = pinctrl_lookup_state(host->pinctrl,
+						  "tm3ads");
+
 	if (apk_np
 		&& !of_property_read_string(apk_np, "status", &apk_sta)
 		&& !strcmp(apk_sta, "okay")) {
@@ -2659,6 +2677,18 @@ static int sunxi_mmc_resume(struct device *dev)
 						"could not set default pins in resume\n");
 					return ret;
 				}
+			}
+
+			if(!IS_ERR(host->pins_tm3acmd))
+			{
+				pinctrl_select_state(host->pinctrl,
+							 host->pins_tm3acmd);
+			}
+
+			if(!IS_ERR(host->pins_tm3ads))
+			{
+				pinctrl_select_state(host->pinctrl,
+							 host->pins_tm3ads);
 			}
 
 			if (!IS_ERR(host->clk_rst)) {

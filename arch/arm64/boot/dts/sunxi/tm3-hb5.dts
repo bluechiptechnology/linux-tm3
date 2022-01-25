@@ -43,10 +43,10 @@
 	pwm-backlight
 	{
 		compatible = "pwm-backlight";
-		pwms = <&pwm 0 10000>;
+		pwms = <&pwm 0 100000>;
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100>;
 		status = "okay";
-		defaultbrightnesslevel=<80>;
+		defaultbrightnesslevel=<100>;
 	};
 
 	leds {
@@ -67,7 +67,8 @@
 			label = "Power Button";
 			gpios = <&r_pio PM 0 0 1 0 0>;
 			gpio-key,wakeup;
-			linux,code = <KEY_SLEEP>;
+			linux,code = <KEY_SLEEP>; //linux
+			//linux,code = <KEY_POWER>; //android
 		};
 	};
 };
@@ -215,6 +216,50 @@
 	status = "okay";
 };
 
+
+/* 12inch
+&lcd0{
+device_type = "lcd0";
+	lcd_used = <0x1>;
+	lcd_driver_name = "default_lcd";
+	lcd_backlight = <0>;
+	lcd_if = <0x0>;
+	lcd_hv_if = <0x00>;
+	lcd_x = <1280>;
+	lcd_y = <800>;
+	lcd_width = <0x96>;
+	lcd_height = <0x5e>;
+	lcd_dclk_freq = <71>;
+	lcd_pwm_used = <0>;
+	lcd_pwm_ch = <0>;
+	lcd_pwm_freq = <10000>;
+	lcd_pwm_pol = <0x1>;
+	lcd_pwm_max_limit = <255>;
+	lcd_hbp = <70>;
+	lcd_ht = <1440>;
+	lcd_hspw = <10>;
+	lcd_vbp = <10>;
+	lcd_vt = <823>;
+	lcd_vspw = <3>;
+	lcd_lvds_if = <0x0>;
+	lcd_lvds_colordepth = <0x1>;
+	lcd_lvds_mode = <0x0>;
+	lcd_frm = <0x1>;
+	lcd_hv_clk_phase = <0x1>;
+	lcd_hv_sync_polarity = <0x1>;
+	lcd_gamma_en = <0x0>;
+	lcd_bright_curve_en = <0x0>;
+	lcd_cmap_en = <0x0>;
+	lcd_bl_en;
+	lcd_bl_en_power = "none";
+	lcd_power = "vcc-lcd-0";
+	pinctrl-0 = <&lcd0_pins_0>;
+	lcdd20 = <0xd6 0xc 0x3 0x1 0x0 0x1 0x1>;
+	pinctrl-1 = <&lcd0_pins_1>;
+};
+*/
+
+
 /* 9inch */
 &lcd0{
 device_type = "lcd0";
@@ -339,7 +384,9 @@ device_type = "lcd0";
 	lcdd20 = <0xd6 0xc 0x3 0x1 0x0 0x1 0x1>;
 	pinctrl-1 = <&lcd0_pins_1>;
 };
+
 */
+
 
 /*
 &boot_disp{
@@ -476,7 +523,7 @@ device_type = "lcd0";
 
 &twi0 {
 	status = "okay";
-	clock-frequency = <100000>;
+	clock-frequency = <400000>;
 
 	pcap: ft5x06@38 {
 		compatible = "focaltech,ft5x06";
@@ -485,7 +532,7 @@ device_type = "lcd0";
         	interrupts = <7 7 IRQ_TYPE_EDGE_FALLING>; /* PH7 */
 		reset-gpio = <&r_pio PL 10 1 0 1 0>;
 		linux,wakeup;
-		status = "okay"; 
+		status = "disabled"; 
 	};
 
 	pcap2: ilitek@41 {	
@@ -498,6 +545,17 @@ device_type = "lcd0";
 		linux,wakeup;
 		status = "okay";
 	};
+
+	pcap3: eeti@2a {
+		compatible = "eeti,egalax_i2c";
+		reg = <0x2A>;
+		interrupt-parent = <&pio>;
+		interrupts = <7 7 IRQ_TYPE_EDGE_FALLING>; /* PH7 */
+		int-gpios = <&pio PH 7 1 0 0 0xffffffff>;
+		linux,wakeup;
+		status = "disabled";
+    };
+
 };
 
 &pinctrl_hog_hostboard{
@@ -533,7 +591,7 @@ device_type = "lcd0";
 	pinctrl-1 = <&spi1_pins_c>;
 	spi1_cs_number = <1>;
 	spi1_cs_bitmap = <1>;
-	cs-gpios = <&pio PH 3 0 0 0 0xffffffff>;
+	chipselect-gpios = <&pio PH 3 0 0 0 0xffffffff>;
 	usegpiocs = <1>;
 	status = "okay";
 

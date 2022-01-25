@@ -31,7 +31,9 @@ export STRIP=${CROSS_COMPILE}strip
 export OBJCOPY=${CROSS_COMPILE}objcopy
 export OBJDUMP=${CROSS_COMPILE}objdump
 export LOCALVERSION=""
-export MKBOOTIMG=${LICHEE_TOOLS_DIR}/pack/pctools/linux/android/mkbootimg
+#export MKBOOTIMG=${LICHEE_TOOLS_DIR}/pack/pctools/linux/android/mkbootimg
+export MKBOOTIMG=mkbootimg
+
 if [ "x$CCACHE_DIR" != "x" ];then
 	CCACHE_Y="ccache "
 fi

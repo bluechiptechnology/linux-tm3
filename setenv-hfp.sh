@@ -7,5 +7,5 @@ export PATH=${TOOLSDIR}/bin:${PATH}
 export CROSS_COMPILE=${TARGET}-
 export LICHEE_KDIR=/embedded/projects/tm3/lichee/linux-4.9
 export LICHEE_PLATFORM=linux
-export LICHEE_MOD_DIR=/embedded/projects/tm3/lichee/linux-4.9/gpubinaries 
+export LICHEE_MOD_DIR=/embedded/projects/tm3/lichee/linux-4.9/linuxbinaries 
 

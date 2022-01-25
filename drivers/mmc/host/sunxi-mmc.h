@@ -304,6 +304,8 @@ struct sunxi_mmc_host {
 	/* pinctrl handles */
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pins_default;
+	struct pinctrl_state *pins_tm3acmd;
+	struct pinctrl_state *pins_tm3ads;
 	struct pinctrl_state *pins_sleep;
 
 	/*sys node */

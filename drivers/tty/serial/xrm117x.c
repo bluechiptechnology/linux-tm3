@@ -1528,8 +1528,8 @@ static int __maybe_unused xrm117x_suspend(struct device *dev)
 	mutex_lock(&s->mutex);
 	mutex_unlock(&s->mutex);
 
-	if (!IS_ERR(s->wifi32Khzclk))
-		clk_disable_unprepare(s->wifi32Khzclk);
+	//if (!IS_ERR(s->wifi32Khzclk))
+	//	clk_disable_unprepare(s->wifi32Khzclk);
 
 	if (!IS_ERR(s->uart24Mhzclk))
 		clk_disable_unprepare(s->uart24Mhzclk);
@@ -1560,8 +1560,8 @@ static int __maybe_unused xrm117x_resume(struct device *dev)
 
 	//printk("xrm117x_resume+\r\n");
 
-	if (!IS_ERR(s->wifi32Khzclk))
-		clk_prepare_enable(s->wifi32Khzclk);
+	//if (!IS_ERR(s->wifi32Khzclk))
+	//	clk_prepare_enable(s->wifi32Khzclk);
 
 	if (!IS_ERR(s->uart24Mhzclk))
 		clk_prepare_enable(s->uart24Mhzclk);
