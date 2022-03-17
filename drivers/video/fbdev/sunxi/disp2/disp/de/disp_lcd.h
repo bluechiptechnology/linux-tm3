@@ -31,6 +31,8 @@ struct disp_lcd_cfg {
 
 	u32 lcd_power_used[LCD_POWER_NUM];
 	char lcd_power[LCD_POWER_NUM][LCD_POWER_STR_LEN];
+	struct backlight_device* lcd_bl_device;
+	unsigned long last_disable_time;
 
 	/* 0: invalid, 1: gpio, 2: regulator */
 	u32 lcd_fix_power_used[LCD_POWER_NUM];

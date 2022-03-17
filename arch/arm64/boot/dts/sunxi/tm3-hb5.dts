@@ -40,7 +40,7 @@
 		};
 	};	
 
-	pwm-backlight
+	pwm_backlight: pwm-backlight
 	{
 		compatible = "pwm-backlight";
 		pwms = <&pwm 0 100000>;
@@ -279,6 +279,7 @@ device_type = "lcd0";
 	lcd_bl_en;
 	lcd_bl_en_power = "none";
 	lcd_power = "vcc-lcd-0";
+	lcd_bl_device = <&pwm_backlight>;
 	pinctrl-0 = <&lcd0_pins_0>;
 	lcdd20 = <0xd6 0xc 0x3 0x1 0x0 0x1 0x1>;
 	pinctrl-1 = <&lcd0_pins_1>;

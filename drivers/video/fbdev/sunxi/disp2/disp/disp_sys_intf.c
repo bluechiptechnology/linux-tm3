@@ -179,6 +179,20 @@ void disp_sys_disable_irq(u32 IrqNo)
 	/* disable_irq(IrqNo); */
 }
 
+struct device_node* disp_sys_script_get_root(char *main_name)
+{
+	char compat[32];
+	u32 len = 0;
+	struct device_node *node;
+	len = sprintf(compat, "allwinner,sunxi-%s", main_name);
+	if (len > 32)
+		__wrn("size of mian_name is out of range\n");
+
+	node = of_find_compatible_node(NULL, NULL, compat);
+	return node;
+}
+EXPORT_SYMBOL(disp_sys_script_get_root);
+
 /* type: 0:invalid, 1: int; 2:str, 3: gpio */
 int disp_sys_script_get_item(char *main_name, char *sub_name, int value[],
 			     int type)

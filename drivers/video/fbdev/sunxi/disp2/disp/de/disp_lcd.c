@@ -8,7 +8,14 @@
  * warranty of any kind, whether express or implied.
  */
 
+#include <linux/backlight.h>
 #include "disp_lcd.h"
+
+#if 0
+#define DEBUG(X) printk X
+#else
+#define DEBUG(X)
+#endif
 
 struct disp_lcd_private_data {
 	struct disp_lcd_flow open_flow;
@@ -392,11 +399,25 @@ static void lcd_get_sys_config(u32 disp, struct disp_lcd_cfg *lcd_cfg)
 			sprintf(sub_name, "lcd_power%d", i);
 		lcd_cfg->lcd_power_used[i] = 0;
 		ret =
-		    disp_sys_script_get_item(primary_key, sub_name,
-					     (int *)(lcd_cfg->lcd_power[i]), 2);
+			disp_sys_script_get_item(primary_key, sub_name,
+						 (int *)(lcd_cfg->lcd_power[i]), 2);
 		if (ret == 2)
 			/* str */
 			lcd_cfg->lcd_power_used[i] = 1;
+	}
+
+	/* lcd_bl_device */
+	{
+		struct device_node* lcd_root = disp_sys_script_get_root(primary_key);
+		struct device_node *backlight = of_parse_phandle(lcd_root, "lcd_bl_device", 0);
+		if (backlight) {
+			lcd_cfg->lcd_bl_device = of_find_backlight_by_node(backlight);
+			of_node_put(backlight);
+			lcd_cfg->last_disable_time = jiffies;
+			DEBUG(("LCD: Backlight defined\n"));
+		} else {
+			DEBUG(("LCD: Error: Backlight not defined\n"));
+		}
 	}
 
 	/* lcd_gpio */
@@ -1143,12 +1164,35 @@ static s32 disp_lcd_power_enable(struct disp_device *lcd, u32 power_id)
 		DE_WRN("NULL hdl!\n");
 		return DIS_FAIL;
 	}
-
+	DEBUG(("LCD: disp_lcd_power_enable\n"));
 	if (disp_lcd_is_used(lcd)) {
 		if (lcdp->lcd_cfg.lcd_power_used[power_id] == 1) {
+			unsigned long current_time = jiffies;
+			uint64_t time_difference = (current_time - lcdp->lcd_cfg.last_disable_time);
+			time_difference  = time_difference * 1000 / HZ;
+
+			/* Ensure LCD off to on time is greater than 1000ms. Required to meet 7" LCD timing */
+			DEBUG(("LCD: off-on time diff %lli ms\n", time_difference));
+			if (time_difference < 1010)
+			{
+				time_difference = 1010 - time_difference;
+				DEBUG(("LCD: off-on sleep %lli ms\n", time_difference));
+				msleep(time_difference);
+			}
+
 			/* regulator type */
 			disp_sys_power_enable(lcdp->lcd_cfg.
 					      lcd_power[power_id]);
+
+			/* enable backlight */
+			if (lcdp->lcd_cfg.lcd_bl_device) {
+				DEBUG(("LCD: enabling backlight\n"));
+				/* Delay before backlight is on to prevent garbage being seen on the screen */
+				msleep(200);
+				lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_UNBLANK;
+				lcdp->lcd_cfg.lcd_bl_device->props.state  &= ~BL_CORE_FBBLANK;
+				backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
+			}
 		}
 	}
 
@@ -1163,13 +1207,23 @@ static s32 disp_lcd_power_disable(struct disp_device *lcd, u32 power_id)
 		DE_WRN("NULL hdl!\n");
 		return DIS_FAIL;
 	}
-
+	DEBUG(("LCD: disp_lcd_power_disable\n"));
 	if (disp_lcd_is_used(lcd)) {
 		if (lcdp->lcd_cfg.lcd_power_used[power_id] == 1) {
+			/* disable backlight */
+			if (lcdp->lcd_cfg.lcd_bl_device) {
+				DEBUG(("LCD: disabling backlight\n"));
+				lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_POWERDOWN;
+				lcdp->lcd_cfg.lcd_bl_device->props.state |= BL_CORE_FBBLANK;
+				backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
+				msleep(20);
+			}
+
 			/* regulator type */
 			disp_sys_power_disable(lcdp->lcd_cfg.
 					       lcd_power[power_id]);
 		}
+		lcdp->lcd_cfg.last_disable_time = jiffies;
 	}
 
 	return 0;
@@ -1766,6 +1820,7 @@ static s32 disp_lcd_enable(struct disp_device *lcd)
 	if (disp_lcd_is_enabled(lcd) == 1)
 		return 0;
 
+	DEBUG(("LCD: disp_lcd_enable\n"));
 	if (mgr->enable)
 		mgr->enable(mgr);
 
@@ -1872,6 +1927,7 @@ static s32 disp_lcd_disable(struct disp_device *lcd)
 	if (disp_lcd_is_enabled(lcd) == 0)
 		return 0;
 
+	DEBUG(("LCD: disp_lcd_disable\n"));
 #if defined(CONFIG_DISP2_LCD_ESD_DETECT)
 	atomic_set(&lcdp->lcd_resetting, 2);
 #endif
@@ -1953,6 +2009,7 @@ static s32 disp_lcd_sw_enable(struct disp_device *lcd)
 	if (mgr->sw_enable)
 		mgr->sw_enable(mgr);
 
+	DEBUG(("LCD: disp_lcd_sw_enable\n"));
 #if !defined(CONFIG_COMMON_CLK_ENABLE_SYNCBOOT)
 	if (lcd_clk_enable(lcd) != 0)
 		return DIS_FAIL;
