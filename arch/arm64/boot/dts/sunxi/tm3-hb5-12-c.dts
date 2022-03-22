@@ -1,0 +1,22 @@
+
+#include "tm3-hb5.dts"
+
+&lcd0 {
+	lcd_x = <1280>;
+	lcd_y = <800>;
+	lcd_width = <258>;
+	lcd_height = <162>;
+	lcd_dclk_freq = <71>;
+	lcd_hbp = <70>;
+	lcd_ht = <1440>;
+	lcd_hspw = <10>;
+	lcd_vbp = <10>;
+	lcd_vt = <823>;
+	lcd_vspw = <3>;
+	lcd_hv_clk_phase = <0x1>;
+	lcd_hv_sync_polarity = <0x1>;
+};
+
+&pcap3 {
+    status = "okay";
+};

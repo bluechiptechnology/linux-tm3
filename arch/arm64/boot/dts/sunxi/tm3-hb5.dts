@@ -543,7 +543,7 @@ device_type = "lcd0";
 		touch-gpio = <&pio PH 7 1 0 0 0xffffffff>;
 		reset-gpio = <&r_pio PL 10 1 0 1 0>;
 		linux,wakeup;
-		status = "okay";
+		status = "disabled";
 	};
 
 	pcap3: eeti@2a {

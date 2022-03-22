@@ -1,0 +1,11 @@
+
+#include "tm3-hb5-43-c.dts"
+
+&tsc2046{
+	status = "okay";
+};
+
+&pcap{
+	status = "disabled";
+};
+
