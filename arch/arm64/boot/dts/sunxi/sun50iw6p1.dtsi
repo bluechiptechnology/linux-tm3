@@ -671,6 +671,7 @@
 			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
 			clock-frequency = <24000000>;
 			timer-prescale = <16>;
+			clocks = <&clk_hosc>;
 		};
 
 		rtc: rtc@07000000 {
