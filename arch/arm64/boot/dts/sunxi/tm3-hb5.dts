@@ -623,7 +623,24 @@ device_type = "lcd0";
 
 };
 
-&s_uart0
-{
-	status = "okay";
+
+// daudio2 clashes with 50w-gpio
+&daudio2 {
+	status = "disabled";
 };
+&ahub_daudio2 {
+	status = "disabled";
+};
+
+// Risc coprocessor peripherals clash with 50w-gpio
+&s_jtag0 {
+	status = "disabled";
+};
+&s_cir0 {
+	status = "disabled";	
+};
+
+&s_uart0 {
+	status = "disabled";	
+};
+
