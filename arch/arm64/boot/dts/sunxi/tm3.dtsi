@@ -192,6 +192,17 @@
 		allwinner,drive = <1>;
 		allwinner,pull = <1>;
 	};
+
+	/* gpios exposed to  50w connector */
+	w50gpio_a_on: w50gpio_on@0
+	{
+		/*          GPIO:  3       4      7        5       6     8       9      10 */
+		allwinner,pins = "PG10", "PG11", "PG12", "PG8", "PG9", "PG13", "PG14", "PH2" ;
+		allwinner,function = "gpio_in";
+		allwinner,muxsel = <0>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
+	};
 };
 
 
@@ -210,6 +221,18 @@
 		};
 
 	};
+
+	/* gpios exposed to  50w connector */
+	w50gpio_b_on: w50gpio_on@0
+	{
+		/*          GPIO:  1      2      12      11  */
+		allwinner,pins = "PL2", "PL3", "PL8", "PL9" ;
+		allwinner,function = "gpio_in";
+		allwinner,muxsel = <0>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
+	};
+
 	xr20m1172_int: xr20m1172_int@0 
 	{
 		allwinner,pins = "PM4";
