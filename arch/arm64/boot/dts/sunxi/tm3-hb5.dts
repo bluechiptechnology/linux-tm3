@@ -623,6 +623,9 @@ device_type = "lcd0";
 
 };
 
+&gmac0{
+	pinctrl-0 = <&gmac_pins_a>, <&w50gpio_a_on>, <&w50gpio_b_on>;
+};
 
 // daudio2 clashes with 50w-gpio
 &daudio2 {
