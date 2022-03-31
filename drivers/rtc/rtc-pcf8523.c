@@ -157,6 +157,8 @@ static int pcf8523_start_rtc(struct i2c_client *client)
 	return 0;
 }
 
+static int pcf8523_rtc_set_time(struct device *dev, struct rtc_time *tm);
+
 static int pcf8523_rtc_read_time(struct device *dev, struct rtc_time *tm)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -178,8 +180,32 @@ static int pcf8523_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	if (err < 0)
 		return err;
 
-	if (regs[0] & REG_SECONDS_OS)
-		return -EINVAL;
+	err = 0;
+
+	if (regs[0] & REG_SECONDS_OS) {
+		/*
+		* If the oscillator was stopped, try to clear the flag. Upon
+		* power-up the flag is always set, but if we cannot clear it
+		* the oscillator isn't running properly for some reason. The
+		* sensible thing therefore is to return an error, signalling
+		* that the clock cannot be assumed to be correct.
+		*/
+
+		regs[0] &= ~REG_SECONDS_OS;
+
+		err = pcf8523_write(client, REG_SECONDS, regs[0]);
+		if (err < 0)
+			return err;
+
+		err = pcf8523_read(client, REG_SECONDS, &regs[0]);
+		if (err < 0)
+			return err;
+
+		if (regs[0] & REG_SECONDS_OS)
+			return -EAGAIN;
+		err = 1;
+	}
+
 
 	tm->tm_sec = bcd2bin(regs[0] & 0x7f);
 	tm->tm_min = bcd2bin(regs[1] & 0x7f);
@@ -188,6 +214,18 @@ static int pcf8523_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	tm->tm_wday = regs[4] & 0x7;
 	tm->tm_mon = bcd2bin(regs[5] & 0x1f) - 1;
 	tm->tm_year = bcd2bin(regs[6]) + 100;
+
+	if (err) {
+		tm->tm_sec = 0;
+		tm->tm_min = 0;
+		tm->tm_hour = 0;
+		tm->tm_mday = 1;
+		tm->tm_mon = 0; //Jan
+		tm->tm_year = 100; //2000
+		err = pcf8523_rtc_set_time(dev, tm);
+		if (err < 0)
+			return err;
+	}
 
 	return rtc_valid_tm(tm);
 }
