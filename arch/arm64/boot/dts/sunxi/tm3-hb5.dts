@@ -628,6 +628,11 @@ device_type = "lcd0";
 
 };
 
+// Device type USB port
+&usbc0{
+	usb_port_type = <0>;
+};
+
 &gmac0{
 	pinctrl-0 = <&gmac_pins_a>, <&w50gpio_a_on>, <&w50gpio_b_on>;
 };
