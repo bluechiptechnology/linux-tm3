@@ -76,6 +76,8 @@ enum spi_mode_type {
 #ifdef CONFIG_DMA_ENGINE
 
 #define SPI_MAX_PAGES	32
+#define SPI_MAX_CS 8
+
 enum spi_dma_dir {
 	SPI_DMA_RWNULL,
 	SPI_DMA_WDEV = DMA_TO_DEVICE,
@@ -116,7 +118,7 @@ struct sunxi_spi {
 	int result; /* 0: succeed -1:fail */
 
 	int UseGPIOcs;
-	int GPIOChipSelects[4];
+	int GPIOChipSelects[SPI_MAX_CS];
 
 	struct completion done;  /* wakup another spi transfer */
 
@@ -419,7 +421,7 @@ static void spi_ss_ctrl(void __iomem *base_addr, u32 on_off)
 }
 
 /* set ss level */
-static void spi_ss_level(struct sunxi_spi *sspi, void __iomem *base_addr, u32 hi_lo)
+static void spi_ss_level(struct sunxi_spi *sspi, void __iomem *base_addr, u32 hi_lo, uint8_t cs_index)
 {
 	u32 reg_val = readl(base_addr + SPI_TC_REG);
 
@@ -430,23 +432,23 @@ static void spi_ss_level(struct sunxi_spi *sspi, void __iomem *base_addr, u32 hi
 		reg_val &= ~SPI_TC_SS_LEVEL;
 	writel(reg_val, base_addr + SPI_TC_REG);
 
-	if(sspi->UseGPIOcs)
+	if(sspi->UseGPIOcs && cs_index < SPI_MAX_CS)
 	{
 		/* Read current chip select*/
 		reg_val &= SPI_TC_SS_MASK;
 		reg_val = reg_val >> SPI_TC_SS_BIT_POS;
 
-		//SPI_INF("GPIO CS%d\n", reg_val);
+		//SPI_INF("GPIO CS%d\n", cs_index);
 
-		if (!gpio_is_valid(sspi->GPIOChipSelects[reg_val]))
+		if (!gpio_is_valid(sspi->GPIOChipSelects[cs_index]))
 		{
-			SPI_INF("GPIO CS%d is not valid\n", reg_val);
+			SPI_INF("GPIO CS%d is not valid\n", cs_index);
 		}
 		else
 		{
-			//SPI_INF("Setting GPIO%d CS%d %s\n", sspi->GPIOChipSelects[reg_val], reg_val, hi_lo ? "high": "low" );
-			gpio_direction_output(sspi->GPIOChipSelects[reg_val], hi_lo);
-			//gpio_set_value(sspi->GPIOChipSelects[reg_val], hi_lo);
+			//SPI_INF("Setting GPIO%d CS%d %s\n", sspi->GPIOChipSelects[cs_index], cs_index, hi_lo ? "high": "low" );
+			gpio_direction_output(sspi->GPIOChipSelects[cs_index], hi_lo);
+			//gpio_set_value(sspi->GPIOChipSelects[cs_index], hi_lo);
 		}
 	}
 }
@@ -839,7 +841,7 @@ static int sunxi_spi_check_cs(int cs_id, struct sunxi_spi *sspi)
 static void sunxi_spi_cs_control(struct spi_device *spi, bool on)
 {
 	struct sunxi_spi *sspi = spi_master_get_devdata(spi->master);
-	spi_ss_level(sspi, sspi->base_addr, on);
+	spi_ss_level(sspi, sspi->base_addr, on, spi->chip_select);
 }
 
 
@@ -1862,6 +1864,10 @@ static int sunxi_spi_probe(struct platform_device *pdev)
 		SPI_ERR("Failed to get cs_number property\n");
 		ret = -EINVAL;
 		goto err0;
+	}
+	if (pdata->cs_num > SPI_MAX_CS) {
+		SPI_ERR("Warning: too many SPI chip select gpios. The max is %i\n", SPI_MAX_CS);
+	    pdata->cs_num = SPI_MAX_CS;
 	}
 
 	snprintf(spi_para, sizeof(spi_para), "spi%d_cs_bitmap", pdev->id);
