@@ -1,0 +1,25 @@
+
+#include "tm3-hb5-cb3.dts"
+
+&lcd0 {
+	lcd_x = <480>;
+	lcd_y = <272>;
+	lcd_width = <95>;
+	lcd_height = <54>;
+	lcd_dclk_freq = <9>;
+	lcd_hbp = <40>;
+	lcd_ht = <525>;
+	lcd_hspw = <1>;
+	lcd_vbp = <8>;
+	lcd_vt = <288>;
+	lcd_vspw = <1>;
+	lcd_hv_clk_phase = <0x1>;
+	lcd_hv_sync_polarity = <0x0>;
+};
+
+&pcap{
+	status = "okay";
+	xresolution = /bits/ 16 <480>;
+	yresolution = /bits/ 16 <272>;
+};
+

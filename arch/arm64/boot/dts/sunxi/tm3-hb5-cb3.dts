@@ -1,0 +1,61 @@
+/*
+Blue Chip Technology 2022
+*/
+
+
+#include <dt-bindings/input/input.h>
+
+#include "tm3-hb5.dts"
+
+/ {
+	model = "Blue Chip Technology TM3+HB5+CB3";
+
+	clocks {
+		clk_can: clk_can {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <16000000>;
+			clock-output-names = "clk_can";
+		};
+	};
+
+};
+
+&spi1 {
+	spi1_cs_number = <0x03>;
+	chipselect-gpios = <&pio PH 3 0 0 0 0xffffffff>, <&pio PG 8 0 0 0 0xffffffff>, <&pio PG 12 0 0 0 0xffffffff>;
+
+	/* The Resistive TS stays at reg index 0 */
+
+	can0@1 {
+		compatible = "microchip,mcp2515";
+		reg = <1>;
+		clocks = <&clk_can>;
+		interrupt-parent = <&pio>;
+		interrupts = <6 11 IRQ_TYPE_EDGE_FALLING>;  /* PG 11 */
+		spi-max-frequency = <10000000>;
+		status = "okay";
+	};
+
+	can1@2 {
+		compatible = "microchip,mcp2515";
+		reg = <2>;
+		clocks = <&clk_can>;
+		interrupt-parent = <&pio>;
+		interrupts = <6 9 IRQ_TYPE_EDGE_FALLING>; /* PG 9 */
+		spi-max-frequency = <10000000>;
+		status = "okay";
+	};
+};
+
+
+/* I2C bus 0 */
+&twi0 {
+	/* accelerometer on CB3 */
+	accel: mma8451fc@1c {
+		compatible = "fsl,mma8451";
+		reg = <0x1c>;
+		status = "okay";
+	};
+};
+
