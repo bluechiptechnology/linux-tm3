@@ -217,134 +217,7 @@
 };
 
 
-/* 12inch
-&lcd0{
-device_type = "lcd0";
-	lcd_used = <0x1>;
-	lcd_driver_name = "default_lcd";
-	lcd_backlight = <0>;
-	lcd_if = <0x0>;
-	lcd_hv_if = <0x00>;
-	lcd_x = <1280>;
-	lcd_y = <800>;
-	lcd_width = <0x96>;
-	lcd_height = <0x5e>;
-	lcd_dclk_freq = <71>;
-	lcd_pwm_used = <0>;
-	lcd_pwm_ch = <0>;
-	lcd_pwm_freq = <10000>;
-	lcd_pwm_pol = <0x1>;
-	lcd_pwm_max_limit = <255>;
-	lcd_hbp = <70>;
-	lcd_ht = <1440>;
-	lcd_hspw = <10>;
-	lcd_vbp = <10>;
-	lcd_vt = <823>;
-	lcd_vspw = <3>;
-	lcd_lvds_if = <0x0>;
-	lcd_lvds_colordepth = <0x1>;
-	lcd_lvds_mode = <0x0>;
-	lcd_frm = <0x1>;
-	lcd_hv_clk_phase = <0x1>;
-	lcd_hv_sync_polarity = <0x1>;
-	lcd_gamma_en = <0x0>;
-	lcd_bright_curve_en = <0x0>;
-	lcd_cmap_en = <0x0>;
-	lcd_bl_en;
-	lcd_bl_en_power = "none";
-	lcd_power = "vcc-lcd-0";
-	pinctrl-0 = <&lcd0_pins_0>;
-	lcdd20 = <0xd6 0xc 0x3 0x1 0x0 0x1 0x1>;
-	pinctrl-1 = <&lcd0_pins_1>;
-};
-*/
-
-
-/* 9inch */
-&lcd0{
-device_type = "lcd0";
-	lcd_used = <0x1>;
-	lcd_driver_name = "default_lcd";
-	lcd_backlight = <0>;
-	lcd_if = <0x0>;
-	lcd_hv_if = <0x00>;
-	lcd_x = <1024>;
-	lcd_y = <768>;
-	lcd_width = <0x96>;
-	lcd_height = <0x5e>;
-	lcd_dclk_freq = <100>;
-	lcd_pwm_used = <0>;
-	lcd_pwm_ch = <0>;
-	lcd_pwm_freq = <10000>;
-	lcd_pwm_pol = <0x1>;
-	lcd_pwm_max_limit = <255>;
-	lcd_hbp = <260>;
-	lcd_ht = <2024>;
-	lcd_hspw = <260>;
-	lcd_vbp = <6>;
-	lcd_vt = <800>;
-	lcd_vspw = <10>;
-	lcd_lvds_if = <0x0>;
-	lcd_lvds_colordepth = <0x1>;
-	lcd_lvds_mode = <0x0>;
-	lcd_frm = <0x1>;
-	lcd_hv_clk_phase = <0x2>;
-	lcd_hv_sync_polarity = <0x1>;
-	lcd_gamma_en = <0x0>;
-	lcd_bright_curve_en = <0x0>;
-	lcd_cmap_en = <0x0>;
-	lcd_bl_en;
-	lcd_bl_en_power = "none";
-	lcd_power = "vcc-lcd-0";
-	pinctrl-0 = <&lcd0_pins_0>;
-	lcdd20 = <0xd6 0xc 0x3 0x1 0x0 0x1 0x1>;
-	pinctrl-1 = <&lcd0_pins_1>;
-};
-
-
-/* 7 inch 
-&lcd0{
-device_type = "lcd0";
-	lcd_used = <0x1>;
-	lcd_driver_name = "default_lcd";
-	lcd_backlight = <0>;
-	lcd_if = <0x0>;
-	lcd_hv_if = <0x00>;
-	lcd_x = <800>;
-	lcd_y = <480>;
-	lcd_width = <165>;
-	lcd_height = <104>;
-	lcd_dclk_freq = <33>;
-	lcd_pwm_used = <0>;
-	lcd_pwm_ch = <0>;
-	lcd_pwm_freq = <10000>;
-	lcd_pwm_pol = <0x1>;
-	lcd_pwm_max_limit = <255>;
-	lcd_hbp = <46>;
-	lcd_ht = <1056>;
-	lcd_hspw = <46>;
-	lcd_vbp = <24>;
-	lcd_vt = <526>;
-	lcd_vspw = <2>;
-	lcd_lvds_if = <0x0>;
-	lcd_lvds_colordepth = <0x1>;
-	lcd_lvds_mode = <0x0>;
-	lcd_frm = <0x1>;
-	lcd_hv_clk_phase = <0x1>;
-	lcd_hv_sync_polarity = <0x0>;
-	lcd_gamma_en = <0x0>;
-	lcd_bright_curve_en = <0x0>;
-	lcd_cmap_en = <0x0>;
-	lcd_bl_en;
-	lcd_bl_en_power = "none";
-	lcd_power = "vcc-lcd-0";
-	pinctrl-0 = <&lcd0_pins_0>;
-	lcdd20 = <0xd6 0xc 0x3 0x1 0x0 0x1 0x1>;
-	pinctrl-1 = <&lcd0_pins_1>;
-};
-*/
-
-/* 4.3 inch 
+/* 4.3 inch */
 &lcd0{
 device_type = "lcd0";
 	lcd_used = <0x1>;
@@ -385,7 +258,6 @@ device_type = "lcd0";
 	pinctrl-1 = <&lcd0_pins_1>;
 };
 
-*/
 
 
 /*
