@@ -294,6 +294,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	if (node && node->phandle && !regulator_is_enabled(pb->power_supply))
 		initial_blank = FB_BLANK_POWERDOWN;
 
+	if (node && of_property_read_bool(node, "initial-blank-powerdown")) {
+		initial_blank = FB_BLANK_POWERDOWN;
+	}
+
 	pb->pwm = devm_pwm_get(&pdev->dev, NULL);
 	if (IS_ERR(pb->pwm) && PTR_ERR(pb->pwm) != -EPROBE_DEFER && !node) {
 		dev_err(&pdev->dev, "unable to request PWM, trying legacy API\n");
