@@ -1066,6 +1066,17 @@ static s32 disp_lcd_backlight_enable(struct disp_device *lcd)
 			lcdp->lcd_cfg.lcd_bl_gpio_hdl =
 			    disp_sys_gpio_request(gpio_info, 1);
 		}
+
+		/* enable backlight */
+		if (lcdp->lcd_cfg.lcd_bl_device) {
+			DEBUG(("LCD: enabling backlight\n"));
+			/* Delay before backlight is on to prevent garbage being seen on the screen */
+			msleep(20);
+			lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_UNBLANK;
+			lcdp->lcd_cfg.lcd_bl_device->props.state  &= ~BL_CORE_FBBLANK;
+			backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
+		}
+
 		bl = disp_lcd_get_bright(lcd);
 		disp_lcd_set_bright(lcd, bl);
 	}
@@ -1103,6 +1114,14 @@ static s32 disp_lcd_backlight_disable(struct disp_device *lcd)
 			     (!strcmp(lcdp->lcd_cfg.lcd_bl_en_power, "none"))))
 				disp_sys_power_disable(lcdp->lcd_cfg.
 						       lcd_bl_en_power);
+		}
+		/* disable backlight */
+		if (lcdp->lcd_cfg.lcd_bl_device) {
+			DEBUG(("LCD: disabling backlight\n"));
+			lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_POWERDOWN;
+			lcdp->lcd_cfg.lcd_bl_device->props.state |= BL_CORE_FBBLANK;
+			backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
+			msleep(20);
 		}
 	}
 
@@ -1183,16 +1202,6 @@ static s32 disp_lcd_power_enable(struct disp_device *lcd, u32 power_id)
 			/* regulator type */
 			disp_sys_power_enable(lcdp->lcd_cfg.
 					      lcd_power[power_id]);
-
-			/* enable backlight */
-			if (lcdp->lcd_cfg.lcd_bl_device) {
-				DEBUG(("LCD: enabling backlight\n"));
-				/* Delay before backlight is on to prevent garbage being seen on the screen */
-				msleep(200);
-				lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_UNBLANK;
-				lcdp->lcd_cfg.lcd_bl_device->props.state  &= ~BL_CORE_FBBLANK;
-				backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
-			}
 		}
 	}
 
@@ -1210,15 +1219,6 @@ static s32 disp_lcd_power_disable(struct disp_device *lcd, u32 power_id)
 	DEBUG(("LCD: disp_lcd_power_disable\n"));
 	if (disp_lcd_is_used(lcd)) {
 		if (lcdp->lcd_cfg.lcd_power_used[power_id] == 1) {
-			/* disable backlight */
-			if (lcdp->lcd_cfg.lcd_bl_device) {
-				DEBUG(("LCD: disabling backlight\n"));
-				lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_POWERDOWN;
-				lcdp->lcd_cfg.lcd_bl_device->props.state |= BL_CORE_FBBLANK;
-				backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
-				msleep(20);
-			}
-
 			/* regulator type */
 			disp_sys_power_disable(lcdp->lcd_cfg.
 					       lcd_power[power_id]);
