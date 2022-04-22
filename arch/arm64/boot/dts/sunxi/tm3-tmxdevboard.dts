@@ -75,6 +75,8 @@
 
 &pio
 {
+	pinctrl-0 = <&pinctrl_hog_hostboard>, <&w50gpio_a_on>;
+
 	lcd0_pins_0: lcd0@0{
 		allwinner,pins = "PD0", "PD1", "PD2", "PD3", "PD4", "PD5", "PD6", "PD7", "PD8", "PD9", "PD10", "PD11", "PD12", "PD13", "PD14", "PD15", "PD16", "PD17", "PD18", "PD19";
 		allwinner,function = "lcd0";
@@ -175,9 +177,22 @@
 		allwinner,drive = <1>;
 		allwinner,pull = <0>;
 	};
+
+	/* gpios exposed to  50w connector */
+	w50gpio_a_on: w50gpio_a_on@0
+	{
+		/*          GPIO:    5      6      7       8       9      10     12*/
+		allwinner,pins =   "PG8", "PG9", "PG12", "PG13", "PG14", "PF6", "PH3" ;
+		allwinner,function = "gpio_in";
+		allwinner,muxsel = <0>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
+	};
 };
 
 &r_pio{
+	pinctrl-0 = <&rpio_pinctrl_hog_hostboard>, <&w50gpio_b_on>;
+
 	uart3_control_pins: uart3controlpins {
 		allwinner,pins = "PM2";
 		allwinner,pname = "entx";
@@ -185,6 +200,18 @@
 		allwinner,muxsel = <0>;
 		allwinner,drive = <0>;
 		allwinner,pull = <0>;
+	};
+
+
+	/* gpios exposed to  50w connector */
+	w50gpio_b_on: w50gpio_b_on@0
+	{
+		/*          GPIO:  1      2      3      4     11  */
+		allwinner,pins = "PL4", "PL5", "PL6", "PL7", "PL10" ;
+		allwinner,function = "gpio_in";
+		allwinner,muxsel = <0>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
 	};
 };
 
