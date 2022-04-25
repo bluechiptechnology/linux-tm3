@@ -527,6 +527,12 @@ device_type = "lcd0";
 		linux,wakeup;
 		status = "okay";
 	};
+
+	/* RTC */
+	rtc_pcf: pcf8523@66 {
+		compatible = "nxp,pcf8523";
+		reg = <0x68>;
+	};
 };
 
 &pinctrl_hog_hostboard{
@@ -609,3 +615,9 @@ device_type = "lcd0";
 {
 	status = "okay";
 };
+
+&rtc
+{
+	status = "disabled";
+};
+
