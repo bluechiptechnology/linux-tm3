@@ -553,3 +553,7 @@ device_type = "lcd0";
 	status = "disabled";	
 };
 
+&rtc {
+	status = "disabled";	
+};
+
