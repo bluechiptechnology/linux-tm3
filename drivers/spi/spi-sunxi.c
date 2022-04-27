@@ -34,6 +34,8 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
+#include <linux/of_gpio.h>
+
 #ifdef CONFIG_DMA_ENGINE
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
@@ -76,6 +78,7 @@ enum spi_mode_type {
 #ifdef CONFIG_DMA_ENGINE
 
 #define SPI_MAX_PAGES	32
+#define SPI_MAX_CS 8
 enum spi_dma_dir {
 	SPI_DMA_RWNULL,
 	SPI_DMA_WDEV = DMA_TO_DEVICE,
@@ -130,6 +133,9 @@ struct sunxi_spi {
 
 	/* keep select during one message */
 	void (*cs_control)(struct spi_device *spi, bool on);
+
+	int UseGPIOcs;
+	int GPIOChipSelects[SPI_MAX_CS];
 
 /*
  * (1) enable cs1,    cs_bitmap = SPI_CHIP_SELECT_CS1;
@@ -833,17 +839,28 @@ static int sunxi_spi_check_cs(int cs_id, struct sunxi_spi *sspi)
 static void sunxi_spi_cs_control(struct spi_device *spi, bool on)
 {
 	struct sunxi_spi *sspi = spi_master_get_devdata(spi->master);
+	unsigned int cs = on ? 1 : 0; 
+	//printk("spi cs_control: device=%i on=%i\n", spi->chip_select, on ? 1: 0);
 
-	unsigned int cs = 0;
+	 /* inverted chip select logic */
+	if (!(spi->mode & SPI_CS_HIGH)) {
+		cs = 1 - cs;
+	}
 
-	if (sspi->cs_control) {
-		if (on) {
-			/* set active */
-			cs = (spi->mode & SPI_CS_HIGH) ? 1 : 0;
-		} else {
-			/* set inactive */
-			cs = (spi->mode & SPI_CS_HIGH) ? 0 : 1;
+	if (sspi->UseGPIOcs)
+	{
+		int cs_index = spi->chip_select;
+		if (cs_index >= SPI_MAX_CS) {
+			return;
 		}
+		if (!gpio_is_valid(sspi->GPIOChipSelects[cs_index])) {
+			SPI_INF("GPIO CS%d is not valid\n", cs_index);
+		}
+		else {
+			gpio_direction_output(sspi->GPIOChipSelects[cs_index], cs);
+		}
+	} else 
+	if (sspi->cs_control) {
 		spi_ss_level(sspi->base_addr, cs);
 	}
 }
@@ -877,14 +894,17 @@ static int sunxi_spi_xfer_setup(struct spi_device *spi, struct spi_transfer *t)
 		return -EINVAL;
 	}
 
-	/* check again board info */
-	if (sunxi_spi_check_cs(spi->chip_select, sspi) != SUNXI_SPI_OK) {
-		SPI_ERR("sunxi_spi_check_cs failed! spi_device cs =%d ...\n", spi->chip_select);
-		return -EINVAL;
+	if (!sspi->UseGPIOcs) {
+		/* check again board info */
+		if (sunxi_spi_check_cs(spi->chip_select, sspi) != SUNXI_SPI_OK) {
+			SPI_ERR("sunxi_spi_check_cs failed! spi_device cs =%d ...\n", spi->chip_select);
+			return -EINVAL;
+		}
+
+		/* set cs */
+		spi_set_cs(spi->chip_select, base_addr);
 	}
 
-	/* set cs */
-	spi_set_cs(spi->chip_select, base_addr);
 	/* master: set spi module clock, set the default frequency10MHz */
 	spi_set_master(base_addr);
 	if (config->max_speed_hz > SPI_MAX_FREQUENCY)
@@ -1425,11 +1445,23 @@ static int sunxi_spi_setup(struct spi_device *spi)
 	/* just support 8 bits per word */
 	if (spi->bits_per_word != 8)
 		return -EINVAL;
-	/* first check its valid,then set it as default select,finally set its */
-	if (sunxi_spi_check_cs(spi->chip_select, sspi) == SUNXI_SPI_FAIL) {
-		SPI_ERR("[spi-%d]: not support cs-%d\n", spi->master->bus_num, spi->chip_select);
-		return -EINVAL;
+
+	if(sspi->UseGPIOcs) {
+		if (!gpio_is_valid(sspi->GPIOChipSelects[spi->chip_select])) {
+			SPI_INF("GPIO CS%d can not be setup as it is not valid\n", spi->chip_select);
+		}
+		else {
+			SPI_INF("Setting up GPIO%d CS%d with default %s\n", sspi->GPIOChipSelects[spi->chip_select], spi->chip_select, spi->mode & SPI_CS_HIGH ? "low": "high" );
+			gpio_direction_output(sspi->GPIOChipSelects[spi->chip_select], spi->mode & SPI_CS_HIGH ? 0 : 1);
+		}
+	} else {
+		/* first check its valid,then set it as default select,finally set its */
+		if (sunxi_spi_check_cs(spi->chip_select, sspi) == SUNXI_SPI_FAIL) {
+			SPI_ERR("[spi-%d]: not support cs-%d\n", spi->master->bus_num, spi->chip_select);
+			return -EINVAL;
+		}
 	}
+
 	if (spi->max_speed_hz > SPI_MAX_FREQUENCY)
 		return -EINVAL;
 	if (!config) {
@@ -1609,11 +1641,15 @@ static int sunxi_spi_hw_init(struct sunxi_spi *sspi, struct sunxi_spi_platform_d
 
 	/* 1. enable the spi module */
 	spi_enable_bus(base_addr);
-	/* 2. set the default chip select */
-	if (sunxi_spi_check_cs(0, sspi) == SUNXI_SPI_OK)
-		spi_set_cs(0, base_addr);
-	else
-		spi_set_cs(1, base_addr);
+
+	if(!sspi->UseGPIOcs) {
+		/* 2. set the default chip select */
+		if (sunxi_spi_check_cs(0, sspi) == SUNXI_SPI_OK)
+			spi_set_cs(0, base_addr);
+		else
+			spi_set_cs(1, base_addr);
+	}
+
 	/* 3. master: set spi module clock;
 	 * 4. set the default frequency	10MHz
 	 */
@@ -1761,6 +1797,7 @@ static int sunxi_spi_probe(struct platform_device *pdev)
 	struct spi_master *master;
 	char spi_para[16] = {0};
 	int ret = 0, err = 0, irq;
+	int iIndexCounter = 0;
 
 	if (np == NULL) {
 		SPI_ERR("SPI failed to get of_node\n");
@@ -1826,6 +1863,50 @@ static int sunxi_spi_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, master);
 	sspi = spi_master_get_devdata(master);
 	memset(sspi, 0, sizeof(struct sunxi_spi));
+
+	snprintf(spi_para, sizeof(spi_para), "usegpiocs");
+	ret = of_property_read_u32(np, spi_para, &sspi->UseGPIOcs);
+	if (ret) {
+		sspi->UseGPIOcs = 0;
+	}
+
+	if (sspi->UseGPIOcs)
+	{
+		SPI_INF("Configuring SPI for GPIO CS\n");
+	}
+	else
+	{
+		SPI_INF("Configuring SPI for HW CS\n");
+	}
+
+	if (sspi->UseGPIOcs)
+	{
+		for (iIndexCounter = 0; iIndexCounter < pdata->cs_num; iIndexCounter++)
+		{
+			int cs_gpio = of_get_named_gpio(np, "chipselect-gpios", iIndexCounter);
+
+			if (!gpio_is_valid(cs_gpio))
+			{
+				SPI_ERR("GPIO CS%d is invalid\n", iIndexCounter);
+			}
+			else
+			{
+				SPI_INF("Configuring GPIO%d as CS%d\n", cs_gpio, iIndexCounter);
+			}
+
+			sspi->GPIOChipSelects[iIndexCounter] = cs_gpio;
+			if (!gpio_is_valid(cs_gpio))
+				continue;
+
+			ret = devm_gpio_request(&pdev->dev, sspi->GPIOChipSelects[iIndexCounter], "SUNXI_SPI_CS");
+			if (ret)
+			{
+				SPI_ERR("can't get cs gpios\n");
+				ret = -EINVAL;
+				goto err0;
+			}
+		}
+	}
 
 	sspi->master        = master;
 	sspi->irq           = irq;
