@@ -568,7 +568,7 @@ device_type = "lcd0";
 	pinctrl-1 = <&spi1_pins_c>;
 	spi1_cs_number = <1>;
 	spi1_cs_bitmap = <1>;
-	cs-gpios = <&pio PG 10 0 0 0 0xffffffff>;
+	chipselect-gpios = <&pio PG 10 0 0 0 0xffffffff>;
 	usegpiocs = <1>;
 	status = "okay";
 
