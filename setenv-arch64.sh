@@ -16,5 +16,5 @@ export LICHEE_TOOLS_DIR=/embedded/projects/tm3/lichee/tools
 export LICHEE_OUT_DIR=/embedded/projects/tm3/lichee/out
 export LICHEE_PLATFORM=linux
 export LICHEE_PLAT_OUT="${LICHEE_OUT_DIR}/${LICHEE_CHIP}/${LICHEE_PLATFORM}/common"
-
+export TM3_LINUX_PACK_OUT_DIR=/embedded/projects/tm3/packlinux/linuxfiles
 
