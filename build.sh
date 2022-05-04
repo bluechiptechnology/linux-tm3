@@ -1,4 +1,5 @@
-make -j8 
+make tm3linux_defconfig
+make -j8
 cp arch/arm64/boot/Image /tftpboot/
 cp ./arch/arm64/boot/dts/sunxi/tm3-hb5-7-c.dtb /tftpboot/tm3.dtb
 
