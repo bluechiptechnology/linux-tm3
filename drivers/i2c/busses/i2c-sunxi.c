@@ -930,7 +930,7 @@ sunxi_i2c_do_xfer(struct sunxi_i2c *i2c, struct i2c_msg *msgs, int num)
 	/* START signal, needn't clear int flag */
 	ret = twi_start(i2c->base_addr, i2c->bus_num);
 	if (ret == SUNXI_I2C_FAIL) {
-		I2C_ERR("[i2c%d] twi_regulator: %s\n",
+		I2C_DBG("[i2c%d] twi_regulator: %s\n",
 			i2c->bus_num,
 			((struct sunxi_i2c_platform_data *)(i2c->adap.dev.parent->platform_data))->regulator_id);
 		twi_soft_reset(i2c->base_addr);
@@ -947,14 +947,14 @@ sunxi_i2c_do_xfer(struct sunxi_i2c *i2c, struct i2c_msg *msgs, int num)
 	/* return code,if(msg_idx == num) succeed */
 	ret = i2c->msg_idx;
 	if (timeout == 0) {
-		I2C_ERR("[i2c%d] xfer timeout (dev addr:0x%x)\n",
+		I2C_DBG("[i2c%d] xfer timeout (dev addr:0x%x)\n",
 				i2c->bus_num, msgs->addr);
 		spin_lock_irqsave(&i2c->lock, flags);
 		i2c->msg = NULL;
 		spin_unlock_irqrestore(&i2c->lock, flags);
 		ret = -ETIME;
 	} else if (ret != num) {
-		I2C_ERR("[i2c%d] incomplete xfer (status: 0x%x, dev addr: 0x%x)\n",
+		I2C_DBG("[i2c%d] incomplete xfer (status: 0x%x, dev addr: 0x%x)\n",
 				i2c->bus_num, ret, msgs->addr);
 		ret = -ECOMM;
 	}
