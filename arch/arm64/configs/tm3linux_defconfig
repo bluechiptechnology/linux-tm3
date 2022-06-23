@@ -1931,6 +1931,7 @@ CONFIG_WILINK_PLATFORM_DATA=y
 # CONFIG_RTL8723CS is not set
 # CONFIG_RTL8723BS_VQ0 is not set
 # CONFIG_RTL8822BS is not set
+CONFIG_RTL8188EU=y
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers
