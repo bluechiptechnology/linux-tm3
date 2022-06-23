@@ -21,6 +21,7 @@ obj-$(CONFIG_WLAN_VENDOR_ZYDAS) += zydas/
 obj-$(CONFIG_RTL8723CS) 	+= rtl8723cs/
 obj-$(CONFIG_RTL8723BS_VQ0) += rtl8723bs_vq0/
 obj-$(CONFIG_RTL8822BS) += rtl8822bs/
+obj-$(CONFIG_RTL8188EU) += rtl8188eu/
 
 # 16-bit wireless PCMCIA client drivers
 obj-$(CONFIG_PCMCIA_RAYCS)	+= ray_cs.o
