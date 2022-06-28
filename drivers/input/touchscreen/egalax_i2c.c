@@ -20,7 +20,7 @@
 #define RELEASE_DATE "2019/01/19"
 
 #include <linux/module.h>
-#include <linux/init.h>egalax_i2c_ts_init
+#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/interrupt.h>
 #include <linux/wait.h>
