@@ -472,7 +472,7 @@ static void ProcessReport(unsigned char *buf, struct _egalax_i2c *p_egalax_i2c)
 				input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, pContactBuf[i].Status);
 				if(pContactBuf[i].Status)
 				{
-					input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR, pContactBuf[i].Status);
+					input_report_abs(input_dev, ABS_MT_TOUCH_MAJOR, pContactBuf[i].Status ? 16 : 0);
 					input_report_abs(input_dev, ABS_MT_POSITION_X, pContactBuf[i].X);
 					input_report_abs(input_dev, ABS_MT_POSITION_Y, pContactBuf[i].Y);
 				}
