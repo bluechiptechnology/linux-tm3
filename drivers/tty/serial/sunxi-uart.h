@@ -20,6 +20,7 @@
 
 #include <linux/regulator/consumer.h>
 #include <linux/dmaengine.h>
+#include <linux/hrtimer.h>
 
 struct sw_uart_pdata {
 	unsigned int used;
@@ -63,6 +64,7 @@ struct sw_uart_dma {
 };
 #endif
 
+
 struct sw_uart_port {
 	struct uart_port port;
 	char   name[16];
@@ -97,6 +99,10 @@ struct sw_uart_port {
 
 	struct pinctrl *pctrl;
 	struct serial_rs485 rs485conf;
+	int rs485entxgpio;
+	unsigned int baud;
+	unsigned int rs485defer;  /* defer time (in micro sec.) indicator for rs485 */
+	struct hrtimer rs485hrtimer;
 };
 
 /* register offset define */
