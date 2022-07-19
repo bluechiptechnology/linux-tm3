@@ -197,9 +197,9 @@
 	uart3_control_pins: uart3controlpins {
 		allwinner,pins = "PM2";
 		allwinner,pname = "entx";
-		allwinner,function = "uart3";
-		allwinner,muxsel = <0>;
-		allwinner,drive = <0>;
+		allwinner,function = "gpio_out";
+		allwinner,muxsel = <1>;
+		allwinner,drive = <1>;
 		allwinner,pull = <0>;
 	};
 
@@ -420,6 +420,7 @@ device_type = "lcd0";
 	pinctrl-1 = <&uart3_sleep_pins>;
 	uart3_port = <3>;
 	uart3_type = <2>;
+	rs485entx = <&r_pio PM 2 1 2 0 0>;
 	status = "okay";
 };
 
