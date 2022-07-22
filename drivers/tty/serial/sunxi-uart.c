@@ -1217,8 +1217,21 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	if ((termios->c_cflag & CREAD) == 0)
 		port->ignore_status_mask |= SUNXI_UART_LSR_DR;
 
-	sw_uport->fcr = SUNXI_UART_FCR_RXTRG_1_2 | SUNXI_UART_FCR_TXTRG_1_2
-			| SUNXI_UART_FCR_FIFO_EN;
+	sw_uport->fcr = SUNXI_UART_FCR_TXTRG_1_2 | SUNXI_UART_FCR_FIFO_EN;
+
+
+	/* FIFO buffer total size is 256 bytes */
+	if (sw_uport->rxtl_uart >= 32 && sw_uport->rxtl_uart < 96) {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_1_4;
+	} else
+	if (sw_uport->rxtl_uart >= 96 && sw_uport->rxtl_uart < 192) {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_1_2;
+	} else
+	if (sw_uport->rxtl_uart >= 192) {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_FULL;
+	} else {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_1CH;
+	}
 	serial_out(port, sw_uport->fcr, SUNXI_UART_FCR);
 
 	sw_uport->lcr = lcr;
@@ -1861,6 +1874,39 @@ static int __init sunxi_early_console_setup(struct earlycon_device *dev,
 OF_EARLYCON_DECLARE(uart0, "", sunxi_early_console_setup);
 #endif	/* CONFIG_SERIAL_SUNXI_EARLYCON */
 
+
+static ssize_t rxfifothreshold_show(struct device * dev, struct device_attribute *attr, char * buf)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+
+	return sprintf(buf, "%d\n", sw_uport->rxtl_uart);
+}
+
+static ssize_t rxfifothreshold_store(struct device * dev, struct device_attribute *attr, const char * buf, size_t n)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+	int val, ret;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	if (val > 256 || val < 1)
+	{
+		ret = -EINVAL;
+	}
+	else
+	{
+		sw_uport->rxtl_uart = val;
+	}
+
+	return ret ? : n;
+}
+
+static DEVICE_ATTR(rxfifothreshold, 0644, rxfifothreshold_show, rxfifothreshold_store);
+
 static int sw_uart_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -2016,6 +2062,8 @@ static int sw_uart_probe(struct platform_device *pdev)
 	hrtimer_init(&sw_uport->rs485hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	sw_uport->rs485hrtimer.function = sw_uart_rs485_tx_timer;
 
+	sw_uport->rxtl_uart = 128; /* half of the FIFO buffer */
+
 	pdata->used = 1;
 	port->iotype = UPIO_MEM;
 	port->type = PORT_SUNXI;
@@ -2079,6 +2127,10 @@ static int sw_uart_probe(struct platform_device *pdev)
 
 	sunxi_uart_sysfs(pdev);
 
+	ret = device_create_file(&pdev->dev, &dev_attr_rxfifothreshold);
+	if (ret < 0)
+		dev_err(&pdev->dev, "failed to add rxfifothreshold attr.\n");
+
 
 	SERIAL_DBG("add uart%d port, port_type %d, uartclk %d\n",
 			pdev->id, port->type, port->uartclk);
@@ -2094,6 +2146,7 @@ static int sw_uart_remove(struct platform_device *pdev)
 	sw_uart_release_dma_tx(sw_uport);
 	sw_uart_release_dma_rx(sw_uport);
 #endif
+	device_remove_file(&pdev->dev, &dev_attr_rxfifothreshold);
 	sw_uart_release_resource(sw_uport, pdev->dev.platform_data);
 	return 0;
 }

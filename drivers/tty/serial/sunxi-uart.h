@@ -103,6 +103,7 @@ struct sw_uart_port {
 	unsigned int baud;
 	unsigned int rs485defer;  /* defer time (in micro sec.) indicator for rs485 */
 	struct hrtimer rs485hrtimer;
+	int rxtl_uart;
 };
 
 /* register offset define */
