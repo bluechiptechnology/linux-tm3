@@ -73,6 +73,8 @@
 #define SERIAL_CIRC_CNT_TO_END(xmit) \
 	CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE)
 
+#define DRIVER_NAME "sunxi-uart"
+
 enum uart_time_use {
 	UART_NO_USE_TIMER = 0,
 	UART_USE_TIMER,
@@ -1961,6 +1963,61 @@ static ssize_t rxfifothreshold_store(struct device * dev, struct device_attribut
 
 static DEVICE_ATTR(rxfifothreshold, 0644, rxfifothreshold_show, rxfifothreshold_store);
 
+static ssize_t rs485txenablegpio_show(struct device * dev, struct device_attribute *attr, char * buf)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+
+	if (gpio_is_valid(sw_uport->rs485entxgpio))
+	{
+		return sprintf(buf, "%d\n", sw_uport->rs485entxgpio);
+	}
+
+	return sprintf(buf, "-1\n");
+}
+
+static ssize_t rs485txenablegpio_store(struct device * dev, struct device_attribute *attr, const char * buf, size_t n)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+	int val, ret;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	if (!gpio_is_valid(val))
+	{
+		ret = -EINVAL;
+	}
+	else
+	{
+		if(gpio_is_valid(sw_uport->rs485entxgpio))
+		{
+			gpio_free(sw_uport->rs485entxgpio);
+			sw_uport->rs485entxgpio = -1;
+		}
+
+		sw_uport->rs485entxgpio = val;
+		ret = devm_gpio_request(dev, sw_uport->rs485entxgpio, DRIVER_NAME);
+		if (ret) {
+			dev_err(dev, "Failed to request RS485 EnTx GPIO: %d\n", sw_uport->rs485entxgpio);
+			sw_uport->rs485entxgpio = -1;
+		}
+		else
+		{
+			//default RS485 TxEn to off
+			gpio_direction_output(sw_uport->rs485entxgpio, 0);
+			//Export TxEn so that existing software will work
+			gpio_export(sw_uport->rs485entxgpio, true);
+		}
+	}
+	
+	return ret ? : n;
+}
+
+static DEVICE_ATTR(rs485txenablegpio, 0644, rs485txenablegpio_show, rs485txenablegpio_store);
+
 static int sw_uart_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -2101,7 +2158,7 @@ static int sw_uart_probe(struct platform_device *pdev)
 	{
 		dev_err(&pdev->dev, "Using GPIO %d as RS485 Transmit Enable\n", sw_uport->rs485entxgpio);
 
-		ret = devm_gpio_request(&pdev->dev, sw_uport->rs485entxgpio, "sunxi-uart");
+		ret = devm_gpio_request(&pdev->dev, sw_uport->rs485entxgpio, DRIVER_NAME);
 		if (ret) {
 			dev_err(&pdev->dev, "Failed to request RS485 EnTx GPIO: %d\n", sw_uport->rs485entxgpio);
 		}
@@ -2189,6 +2246,11 @@ static int sw_uart_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to add dmaenable attr.\n");
 #endif
 
+	ret = device_create_file(&pdev->dev, &dev_attr_rs485txenablegpio);
+	if (ret < 0)
+		dev_err(&pdev->dev, "failed to add rs485txenablegpio attr.\n");
+
+
 	SERIAL_DBG("add uart%d port, port_type %d, uartclk %d\n",
 			pdev->id, port->type, port->uartclk);
 	return uart_add_one_port(&sw_uart_driver, port);
@@ -2204,6 +2266,7 @@ static int sw_uart_remove(struct platform_device *pdev)
 	sw_uart_release_dma_rx(sw_uport);
 	device_remove_file(&pdev->dev, &dev_attr_dmaenabled);
 #endif
+	device_remove_file(&pdev->dev, &dev_attr_rs485txenablegpio);
 	device_remove_file(&pdev->dev, &dev_attr_rxfifothreshold);
 	sw_uart_release_resource(sw_uport, pdev->dev.platform_data);
 	return 0;
