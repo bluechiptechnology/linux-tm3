@@ -89,7 +89,7 @@ static void sw_uart_release_dma_rx(struct sw_uart_port *sw_uport);
 static int sw_uart_init_dma_rx(struct sw_uart_port *sw_uport);
 static int sw_uart_start_dma_rx(struct sw_uart_port *sw_uport);
 static void sw_uart_update_rb_addr(struct sw_uart_port *sw_uport);
-static void sw_uart_report_dma_rx(unsigned long uart);
+static enum hrtimer_restart  sw_uart_report_dma_rx(struct hrtimer *rx_hrtimer);
 #endif
 
 #ifdef CONFIG_SW_UART_DUMP_DATA
@@ -631,7 +631,7 @@ static void sw_uart_stop_dma_rx(struct sw_uart_port *sw_uport)
 	struct sw_uart_dma *uart_dma = sw_uport->dma;
 
 	if (uart_dma && uart_dma->rx_dma_used) {
-		del_timer(&uart_dma->rx_timer);
+		hrtimer_cancel(&sw_uport->rx_hrtimer);
 		dmaengine_terminate_all(uart_dma->dma_chan_rx);
 		uart_dma->rb_tail = 0;
 		uart_dma->rx_dma_used = 0;
@@ -727,8 +727,8 @@ static int sw_uart_start_dma_rx(struct sw_uart_port *sw_uport)
 
 	uart_dma->rx_dma_used = 1;
 	if (uart_dma->use_timer == 1) {
-		mod_timer(&uart_dma->rx_timer,
-			jiffies + msecs_to_jiffies(uart_dma->rx_timeout));
+		hrtimer_start(&sw_uport->rx_hrtimer, ms_to_ktime(uart_dma->rx_timeout),
+				HRTIMER_MODE_REL);
 	}
 	return 1;
 }
@@ -749,15 +749,15 @@ static void sw_uart_update_rb_addr(struct sw_uart_port *sw_uport)
 	}
 }
 
-static void sw_uart_report_dma_rx(unsigned long uart)
+static enum hrtimer_restart sw_uart_report_dma_rx (struct hrtimer *hrt)
 {
 	int count, flip = 0;
-	struct sw_uart_port *sw_uport = (struct sw_uart_port *)uart;
+	struct sw_uart_port* sw_uport = container_of(hrt, struct sw_uart_port, rx_hrtimer);
 	struct uart_port *port = &sw_uport->port;
 	struct sw_uart_dma *uart_dma = sw_uport->dma;
 
 	if (!uart_dma->rx_dma_used || !port->state->port.tty)
-		return;
+		return HRTIMER_NORESTART;
 
 	sw_uart_update_rb_addr(sw_uport);
 	while (1) {
@@ -773,9 +773,11 @@ static void sw_uart_report_dma_rx(unsigned long uart)
 			(uart_dma->rb_tail + count) & (uart_dma->rb_size - 1);
 	}
 
-	if (uart_dma->use_timer == 1)
-		mod_timer(&uart_dma->rx_timer,
-			jiffies + msecs_to_jiffies(uart_dma->rx_timeout));
+	if (uart_dma->use_timer == 1) {
+		hrtimer_forward_now(&sw_uport->rx_hrtimer, ms_to_ktime(uart_dma->rx_timeout));
+		return HRTIMER_RESTART;
+	}
+	return HRTIMER_NORESTART;
 }
 
 #endif
@@ -1815,6 +1817,10 @@ static int sw_uart_release_resource(struct sw_uart_port *sw_uport, struct sw_uar
 	SERIAL_DBG("put system resource(clk & IO)\n");
 
 	hrtimer_cancel(&sw_uport->rs485hrtimer);
+	
+	#ifdef CONFIG_SERIAL_SUNXI_DMA
+	hrtimer_cancel(&sw_uport->rx_hrtimer);
+	#endif
 
 	#ifdef CONFIG_SW_UART_DUMP_DATA
 	kfree(sw_uport->dump_buff);
@@ -1873,6 +1879,50 @@ static int __init sunxi_early_console_setup(struct earlycon_device *dev,
 }
 OF_EARLYCON_DECLARE(uart0, "", sunxi_early_console_setup);
 #endif	/* CONFIG_SERIAL_SUNXI_EARLYCON */
+
+#ifdef CONFIG_SERIAL_SUNXI_DMA
+static ssize_t dmaenabled_show(struct device * dev, struct device_attribute *attr, char * buf)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+
+	return sprintf(buf, "%d\n", sw_uport->dma->use_dma ? 1 : 0);
+}
+
+static ssize_t dmaenabled_store(struct device * dev, struct device_attribute *attr, const char * buf, size_t n)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+	int val, ret;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	switch (val) {
+	case 0:
+		sw_uport->dma->use_dma = 0;
+		break;
+	case 1: {
+		int state = sw_uport->dma->use_dma;
+		sw_uport->dma->use_dma = TX_DMA | RX_DMA;
+		/* if DMA was not previously enabled - initialise it */
+		if (state == 0) {
+			sw_uart_init_dma_rx(sw_uport);
+			sw_uart_init_dma_tx(sw_uport);
+		}
+		}
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret ? : n;
+}
+
+static DEVICE_ATTR(dmaenabled, 0644, dmaenabled_show, dmaenabled_store);
+#endif /* CONFIG_SERIAL_SUNXI_DMA */
 
 
 static ssize_t rxfifothreshold_show(struct device * dev, struct device_attribute *attr, char * buf)
@@ -2075,15 +2125,12 @@ static int sw_uart_probe(struct platform_device *pdev)
 #ifdef CONFIG_SERIAL_SUNXI_DMA
 	/* set dma config */
 	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
-	if (sw_uport->dma->use_dma & RX_DMA) {
+	if (sw_uport->dma) {
 		/* timer */
 		sw_uport->dma->use_timer = UART_USE_TIMER;
-		sw_uport->dma->rx_timer.function = sw_uart_report_dma_rx;
-		sw_uport->dma->rx_timer.data = (unsigned long)sw_uport;
+		hrtimer_init(&sw_uport->rx_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		sw_uport->rx_hrtimer.function = sw_uart_report_dma_rx;
 		sw_uport->dma->rx_timeout = 5;
-		sw_uport->dma->rx_timer.expires =
-			jiffies + msecs_to_jiffies(sw_uport->dma->rx_timeout);
-		init_timer(&sw_uport->dma->rx_timer);
 
 		/* rx buffer */
 		sw_uport->dma->rb_size = DMA_SERIAL_BUFFER_SIZE;
@@ -2101,11 +2148,10 @@ static int sw_uart_probe(struct platform_device *pdev)
 			dev_info(sw_uport->port.dev,
 		"dma_rx_phy 0x%08x\n", (unsigned)sw_uport->dma->rx_phy_addr);
 		}
+		if (sw_uport->dma->use_dma & RX_DMA) {
+			sw_uart_init_dma_rx(sw_uport);
+		}
 
-		sw_uart_init_dma_rx(sw_uport);
-	}
-
-	if (sw_uport->dma->use_dma & TX_DMA) {
 		/* tx buffer */
 		sw_uport->dma->tb_size = UART_XMIT_SIZE;
 		sw_uport->dma->tx_buffer = dma_alloc_coherent(
@@ -2120,7 +2166,9 @@ static int sw_uart_probe(struct platform_device *pdev)
 			dev_info(sw_uport->port.dev, "dma_tx_phy 0x%08x\n",
 					(unsigned) sw_uport->dma->tx_phy_addr);
 		}
-		sw_uart_init_dma_tx(sw_uport);
+		if (sw_uport->dma->use_dma & TX_DMA) {
+			sw_uart_init_dma_tx(sw_uport);
+		}
 	}
 
 #endif
@@ -2131,6 +2179,11 @@ static int sw_uart_probe(struct platform_device *pdev)
 	if (ret < 0)
 		dev_err(&pdev->dev, "failed to add rxfifothreshold attr.\n");
 
+#ifdef CONFIG_SERIAL_SUNXI_DMA
+	ret = device_create_file(&pdev->dev, &dev_attr_dmaenabled);
+	if (ret < 0)
+		dev_err(&pdev->dev, "failed to add dmaenable attr.\n");
+#endif
 
 	SERIAL_DBG("add uart%d port, port_type %d, uartclk %d\n",
 			pdev->id, port->type, port->uartclk);
@@ -2145,6 +2198,7 @@ static int sw_uart_remove(struct platform_device *pdev)
 #ifdef CONFIG_SERIAL_SUNXI_DMA
 	sw_uart_release_dma_tx(sw_uport);
 	sw_uart_release_dma_rx(sw_uport);
+	device_remove_file(&pdev->dev, &dev_attr_dmaenabled);
 #endif
 	device_remove_file(&pdev->dev, &dev_attr_rxfifothreshold);
 	sw_uart_release_resource(sw_uport, pdev->dev.platform_data);
