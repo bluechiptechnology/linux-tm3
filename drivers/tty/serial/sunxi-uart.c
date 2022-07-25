@@ -206,6 +206,8 @@ static unsigned int sw_uart_handle_rx(struct sw_uart_port *sw_uport, unsigned in
 #ifdef CONFIG_SW_UART_DUMP_DATA
 			sw_uport->dump_buff[sw_uport->dump_len++] = ch;
 #endif
+		} else {
+			ch = 0;
 		}
 
 		flag = TTY_NORMAL;
@@ -224,7 +226,7 @@ static unsigned int sw_uart_handle_rx(struct sw_uart_port *sw_uport, unsigned in
 				 * may get masked by ignore_status_mask
 				 * or read_status_mask.
 				 */
-				if (uart_handle_break(&sw_uport->port))
+				if (!ch && uart_handle_break(&sw_uport->port))
 					goto ignore_char;
 			} else if (lsr & SUNXI_UART_LSR_PE)
 				sw_uport->port.icount.parity++;
@@ -1241,6 +1243,8 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	sw_uport->dlh = dlh;
 	sw_uart_force_lcr(sw_uport, 50);
 
+	/* clear rxfifo after set lcr & baud to discard existing data in FIFO */
+	serial_out(port, sw_uport->fcr|SUNXI_UART_FCR_RXFIFO_RST, SUNXI_UART_FCR);
 	port->ops->set_mctrl(port, port->mctrl);
 
 	sw_uport->ier = SUNXI_UART_IER_RLSI | SUNXI_UART_IER_RDI;
@@ -1256,9 +1260,9 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 #endif
 	/* flow control */
 	sw_uport->mcr &= ~SUNXI_UART_MCR_AFE;
-	port->status &= ~UPSTAT_AUTOCTS;
+	port->status &= ~(UPSTAT_AUTOCTS | UPSTAT_AUTORTS);
 	if (termios->c_cflag & CRTSCTS) {
-		port->status |= UPSTAT_AUTOCTS;
+		port->status |= UPSTAT_AUTOCTS | UPSTAT_AUTORTS;
 		sw_uport->mcr |= SUNXI_UART_MCR_AFE;
 	}
 	serial_out(port, sw_uport->mcr, SUNXI_UART_MCR);
