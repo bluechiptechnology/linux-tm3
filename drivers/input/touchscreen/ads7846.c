@@ -36,6 +36,15 @@
 #include <linux/module.h>
 #include <asm/irq.h>
 
+/* Multi touch reporting - for Android */
+#ifdef CONFIG_ANDROID
+#define REPORT_MT
+#endif
+
+#ifdef REPORT_MT
+#include <linux/input/mt.h>
+#endif
+
 /*
  * This code has been heavily tested on a Nokia 770, and lightly
  * tested on other ads7846 devices (OSK/Mistral, Lubbock, Spitz).
@@ -101,6 +110,7 @@ struct ads7846 {
 	struct regulator	*reg;
 
 #if IS_ENABLED(CONFIG_HWMON)
+	struct attribute_group	*attr_group;
 	struct device		*hwmon;
 #endif
 
@@ -109,6 +119,7 @@ struct ads7846 {
 	u16			vref_delay_usecs;
 	u16			x_plate_ohms;
 	u16			pressure_max;
+	u16			pressure_min;
 
 	bool			swap_xy;
 	bool			use_internal;
@@ -491,6 +502,16 @@ static umode_t ads7846_is_visible(struct kobject *kobj, struct attribute *attr,
 	return attr->mode;
 }
 
+static struct attribute *ads7843_attributes[] = {
+	&dev_attr_in0_input.attr,
+	&dev_attr_in1_input.attr,
+	NULL,
+};
+
+static struct attribute_group ads7843_attr_group = {
+	.attrs = ads7843_attributes,
+};
+
 static struct attribute *ads7846_attributes[] = {
 	&dev_attr_temp0.attr,		/* 0 */
 	&dev_attr_temp1.attr,		/* 1 */
@@ -503,10 +524,22 @@ static struct attribute_group ads7846_attr_group = {
 	.attrs = ads7846_attributes,
 	.is_visible = ads7846_is_visible,
 };
-__ATTRIBUTE_GROUPS(ads7846_attr);
+//__ATTRIBUTE_GROUPS(ads7846_attr);
+
+static struct attribute *ads7845_attributes[] = {
+	&dev_attr_in0_input.attr,
+	NULL,
+};
+
+static struct attribute_group ads7845_attr_group = {
+	.attrs = ads7845_attributes,
+};
 
 static int ads784x_hwmon_register(struct spi_device *spi, struct ads7846 *ts)
 {
+	struct device *hwmon;
+	int err;
+
 	/* hwmon sensors need a reference voltage */
 	switch (ts->model) {
 	case 7846:
@@ -526,11 +559,40 @@ static int ads784x_hwmon_register(struct spi_device *spi, struct ads7846 *ts)
 		}
 		break;
 	}
-
+/*
 	ts->hwmon = hwmon_device_register_with_groups(&spi->dev, spi->modalias,
 						      ts, ads7846_attr_groups);
 
 	return PTR_ERR_OR_ZERO(ts->hwmon);
+*/
+	/* different chips have different sensor groups */
+	switch (ts->model) {
+	case 7846:
+		ts->attr_group = &ads7846_attr_group;
+		break;
+	case 7845:
+		ts->attr_group = &ads7845_attr_group;
+		break;
+	case 7843:
+		ts->attr_group = &ads7843_attr_group;
+		break;
+	default:
+		dev_dbg(&spi->dev, "ADS%d not recognized\n", ts->model);
+		return 0;
+	}
+
+	err = sysfs_create_group(&spi->dev.kobj, ts->attr_group);
+	if (err)
+		return err;
+
+	hwmon = hwmon_device_register(&spi->dev);
+	if (IS_ERR(hwmon)) {
+		sysfs_remove_group(&spi->dev.kobj, ts->attr_group);
+		return PTR_ERR(hwmon);
+	}
+
+	ts->hwmon = hwmon;
+	return 0;
 }
 
 static void ads784x_hwmon_unregister(struct spi_device *spi,
@@ -700,6 +762,16 @@ static void ads7846_read_state(struct ads7846 *ts)
 	int val;
 	int action;
 	int error;
+	int iIndexCounter = 0;
+
+	//DPR Clear transmit buffers
+	for(iIndexCounter = 0; iIndexCounter < 18; iIndexCounter++)
+	{
+		if(ts->xfer[iIndexCounter].len == 2)
+		{
+			ts->xfer[iIndexCounter].tx_buf = NULL;
+		}
+	}	
 
 	while (msg_idx < ts->msg_count) {
 
@@ -798,7 +870,7 @@ static void ads7846_report_state(struct ads7846 *ts)
 	 * the maximum. Don't report it to user space, repeat at least
 	 * once more the measurement
 	 */
-	if (packet->tc.ignore || Rt > ts->pressure_max) {
+	if (packet->tc.ignore || Rt > ts->pressure_max || Rt < ts->pressure_min) {
 		dev_vdbg(&ts->spi->dev, "ignored %d pressure %d\n",
 			 packet->tc.ignore, Rt);
 		return;
@@ -830,15 +902,28 @@ static void ads7846_report_state(struct ads7846 *ts)
 			swap(x, y);
 
 		if (!ts->pendown) {
+#ifdef REPORT_MT
+			input_mt_slot(input, 0);
+			input_mt_report_slot_state(input, MT_TOOL_FINGER, true);
 			input_report_key(input, BTN_TOUCH, 1);
+#else
+			input_report_key(input, BTN_TOUCH, 1);
+#endif			
 			ts->pendown = true;
 			dev_vdbg(&ts->spi->dev, "DOWN\n");
 		}
-
+#ifdef REPORT_MT
+		input_report_abs(input, ABS_MT_TRACKING_ID, 0);
+		input_report_abs(input, ABS_MT_TOUCH_MAJOR, 16); // touch diameter
+		input_report_abs(input, ABS_MT_WIDTH_MAJOR, 10);
+		input_report_abs(input, ABS_MT_POSITION_X, x);
+		input_report_abs(input, ABS_MT_POSITION_Y,  (MAX_12BIT) - y);
+		input_mt_report_pointer_emulation(input, true);
+#else
 		input_report_abs(input, ABS_X, x);
 		input_report_abs(input, ABS_Y, y);
 		input_report_abs(input, ABS_PRESSURE, ts->pressure_max - Rt);
-
+#endif
 		input_sync(input);
 		dev_vdbg(&ts->spi->dev, "%4d/%4d/%4d\n", x, y, Rt);
 	}
@@ -873,9 +958,15 @@ static irqreturn_t ads7846_irq(int irq, void *handle)
 
 	if (ts->pendown) {
 		struct input_dev *input = ts->input;
-
+#ifdef REPORT_MT
+		input_mt_slot(input, 0);
+		input_mt_report_slot_state(input, MT_TOOL_FINGER, false);
+		input_report_key(input, BTN_TOUCH, 0);
+		input_mt_report_pointer_emulation(input, true);
+#else
 		input_report_key(input, BTN_TOUCH, 0);
 		input_report_abs(input, ABS_PRESSURE, 0);
+#endif
 		input_sync(input);
 
 		ts->pendown = false;
@@ -1313,6 +1404,7 @@ static int ads7846_probe(struct spi_device *spi)
 	ts->vref_delay_usecs = pdata->vref_delay_usecs ? : 100;
 	ts->x_plate_ohms = pdata->x_plate_ohms ? : 400;
 	ts->pressure_max = pdata->pressure_max ? : ~0;
+	ts->pressure_min = pdata->pressure_min ? : 0;
 
 	ts->vref_mv = pdata->vref_mv;
 	ts->swap_xy = pdata->swap_xy;
@@ -1348,14 +1440,19 @@ static int ads7846_probe(struct spi_device *spi)
 	ts->wait_for_sync = pdata->wait_for_sync ? : null_wait_for_sync;
 
 	snprintf(ts->phys, sizeof(ts->phys), "%s/input0", dev_name(&spi->dev));
-	snprintf(ts->name, sizeof(ts->name), "ADS%d Touchscreen", ts->model);
+	snprintf(ts->name, sizeof(ts->name), "ADS%d_Touchscreen", ts->model);
 
 	input_dev->name = ts->name;
 	input_dev->phys = ts->phys;
 	input_dev->dev.parent = &spi->dev;
 
-	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
-	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
+	//input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
+	//input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
+	__set_bit(EV_ABS, input_dev->evbit);
+	__set_bit(EV_KEY, input_dev->evbit);
+	__set_bit(BTN_TOUCH, input_dev->keybit);
+	__set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
+#ifndef REPORT_MT
 	input_set_abs_params(input_dev, ABS_X,
 			pdata->x_min ? : 0,
 			pdata->x_max ? : MAX_12BIT,
@@ -1366,6 +1463,7 @@ static int ads7846_probe(struct spi_device *spi)
 			0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE,
 			pdata->pressure_min, pdata->pressure_max, 0, 0);
+#endif
 
 	ads7846_setup_spi_msg(ts, pdata);
 
@@ -1419,6 +1517,24 @@ static int ads7846_probe(struct spi_device *spi)
 	err = sysfs_create_group(&spi->dev.kobj, &ads784x_attr_group);
 	if (err)
 		goto err_remove_hwmon;
+
+#ifdef REPORT_MT
+	err = input_mt_init_slots(input_dev, 8, 0);
+	if (err)
+		goto err_remove_hwmon;
+
+	dev_info(&spi->dev, "TS calibration: x=%i - %i, y=%i - %i pressure=%i - %i\n",pdata->x_min, pdata->x_max, pdata->y_min, pdata->y_max, ts->pressure_min, ts->pressure_max);
+
+	input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->x_min, pdata->x_max, 0, 0);
+	if (pdata->y_min > pdata->y_max) {
+		input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_max, pdata->y_min, 0, 0);
+		dev_warn(&spi->dev, "the Y axis is reversed in DTB\n");
+	} else {
+		input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->y_min, pdata->y_max, 0, 0);
+	}
+	input_set_abs_params(input_dev, ABS_MT_WIDTH_MAJOR, 0, MAX_12BIT, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+#endif
 
 	err = input_register_device(input_dev);
 	if (err)
