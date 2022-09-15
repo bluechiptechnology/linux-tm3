@@ -1,0 +1,200 @@
+/*
+ * Allwinner Technology CO., Ltd. sun50iw6p1 soc board.
+ *
+ * soc board support.
+ */
+
+#include <dt-bindings/input/input.h>
+
+#include "tm3.dtsi"
+
+/ {
+	model = "BCT TM3-HBPICM4";
+
+	hbxregulators {
+		compatible = "simple-bus";
+
+		power{
+			compatible = "regulator-fixed";
+			regulator-name = "power";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			regulator-always-on;
+		};		
+	};	
+};
+
+&pio
+{
+	pinctrl-0 = <&pinctrl_hog_hostboard>;
+
+	uart1_pins_a: uart1@0 {
+		allwinner,pins = "PG6", "PG7";
+		allwinner,pname = "uart1_tx", "uart1_rx";
+		allwinner,function = "uart1";
+		allwinner,muxsel = <2>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
+	};
+
+	uart1_pins_b: uart1@1 {
+		allwinner,pins = "PG6", "PG7";
+		allwinner,function = "io_disabled";
+		allwinner,muxsel = <7>;
+		allwinner,drive = <1>;
+		allwinner,pull = <0>;
+	};
+
+};
+
+&r_pio{
+	pinctrl-0 = <&rpio_pinctrl_hog_hostboard>;
+};
+
+
+/*
+&boot_disp{
+	compatible = "allwinner,boot_disp";
+	device_type = "boot_disp";
+	auto_hpd = <0x1>;
+	output_disp = <0x0>;
+	output_type = <0x3>;
+	output_mode = <0xb>;
+	output_format = <0x1>;
+	output_bits = <0x0>;
+	output_eotf = <0x4>;
+	output_cs = <0x104>;
+	hdmi_channel = <0x0>;
+	hdmi_mode = <0x4>;
+};
+*/
+
+&disp{
+	compatible = "allwinner,sunxi-disp";
+	reg =	<0x0 0x01000000 0x0 0x01400000>,/*de*/
+			<0x0 0x06510000 0x0 0x100>,/*tcon-top*/
+			<0x0 0x06511000 0x0 0x800>,/*tcon0*/
+			<0x0 0x06515000 0x0 0x800>;/*tcon1*/
+	interrupts = <GIC_SPI 65 0x0104>, <GIC_SPI 66 0x0104>;
+	clocks = <&clk_de>, <&clk_display_top>,  <&clk_tcon_lcd>, <&clk_tcon_tv>;
+	boot_disp = <0x0>;
+	boot_disp1 = <0x0>;
+	boot_disp2 = <0x0>;
+	fb_base = <0x0>;
+	iommus = <&mmu_aw 0 0>;
+	status = "okay";
+	device_type = "disp";
+	disp_init_enable = <0x1>;
+	disp_mode = <0>;
+	screen0_output_type = <0x3>;
+	screen0_output_mode = <0xa>;
+	screen0_output_format = <0xa>;
+	screen0_output_bits = <0x0>;
+	screen0_output_eotf = <0x4>;
+	screen0_output_cs = <0x101>;
+	screen0_output_dvi_hdmi = <0x2>;
+	screen0_output_range = <0x2>;
+	screen0_output_scan = <0x0>;
+	screen0_output_aspect_ratio = <10>;
+	screen1_output_type = <0x0>;
+	screen1_output_mode = <0x2>;
+	screen1_output_format = <0x1>;
+	screen1_output_bits = <0x0>;
+	screen1_output_eotf = <0x4>;
+	screen1_output_cs = <0x104>;
+	screen1_output_dvi_hdmi = <0x2>;
+	screen1_output_range = <0x2>;
+	screen1_output_scan = <0x0>;
+	screen1_output_aspect_ratio = <0x8>;
+	dev0_output_type = <0x1>;
+	dev0_output_mode = <0xa>;
+	dev0_screen_id = <0x0>;
+	dev0_do_hpd = <0x0>;
+	dev1_output_type = <0x0>;
+	dev1_output_mode = <0xb>;
+	dev1_screen_id = <0x1>;
+	dev1_do_hpd = <0x1>;
+	dev2_output_type = <0x0>;
+	def_output_dev = <0x0>;
+	hdmi_mode_check = <0x1>;
+	fb0_format = <0x0>;
+	fb0_width = <0>;
+	fb0_height = <0>;
+	fb1_format = <0x0>;
+	fb1_width = <0x0>;
+	fb1_height = <0x0>;
+	disp_para_zone = <0x1>;
+};
+
+
+&hdmi{
+	device_type = "hdmi";
+	status = "okay";
+	hdmi_hdcp_enable = <0x0>;
+	hdmi_hdcp22_enable = <0x0>;
+	hdmi_cts_compatibility = <0x0>;
+	hdmi_cec_support = <0x1>;
+	hdmi_cec_super_standby = <0x1>;
+	hdmi_skip_bootedid = <0x1>;
+	pinctrl-0 = <&hdmi_ddc_pin_a>;
+	ddc_en_io_ctrl = <0x0>;
+};
+
+&uart0 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&uart0_pins_a>;
+	pinctrl-1 = <&uart0_pins_b>;
+	uart0_port = <0>;
+	uart0_type = <2>;
+	status = "okay";
+};
+
+
+&pinctrl_hog_hostboard{
+	allwinner,pins = "PH7";
+	allwinner,function = "irq";
+	allwinner,muxsel = <0x6>;
+	allwinner,pull = <0xffffffff>;
+	allwinner,drive =<0xffffffff>;
+	allwinner,data = <0xffffffff>;
+};
+
+
+&rpio_pinctrl_hog_hostboard{
+	allwinner,pins = "PM0";
+	allwinner,function = "gpio";
+	allwinner,muxsel = <0>;
+	allwinner,drive = <0>;
+	allwinner,pull = <1>;
+};
+
+
+// Device type USB port
+&usbc0{
+	usb_port_type = <0>;
+};
+
+// daudio2 clashes with 50w-gpio
+&daudio2 {
+	status = "disabled";
+};
+&ahub_daudio2 {
+	status = "disabled";
+};
+
+// Risc coprocessor peripherals clash with 50w-gpio
+&s_jtag0 {
+	status = "disabled";
+};
+&s_cir0 {
+	status = "disabled";	
+};
+
+&s_uart0 {
+	status = "disabled";	
+};
+
+&rtc {
+	status = "disabled";	
+};
+

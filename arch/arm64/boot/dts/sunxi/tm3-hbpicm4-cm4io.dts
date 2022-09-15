@@ -1,0 +1,16 @@
+/*
+ * Allwinner Technology CO., Ltd. sun50iw6p1 soc board.
+ *
+ * soc board support.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/input/input.h>
+
+#include "tm3-hbpicm4.dtsi"
+
+/ {
+	model = "BCT TM3-HBPICM4-CM4IO";
+};
+
