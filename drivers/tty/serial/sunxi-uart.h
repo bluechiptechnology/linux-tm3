@@ -102,6 +102,7 @@ struct sw_uart_port {
 	int rs485entxgpio;
 	unsigned int baud;
 	unsigned int rs485defer;  /* defer time (in micro sec.) indicator for rs485 */
+	unsigned int rs485entxcnt;
 	struct hrtimer rs485hrtimer;
 	int rxtl_uart;
 };

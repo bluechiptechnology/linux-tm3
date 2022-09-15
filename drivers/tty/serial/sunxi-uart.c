@@ -75,6 +75,8 @@
 
 #define DRIVER_NAME "sunxi-uart"
 
+#define RS485_DEBUG 0
+
 enum uart_time_use {
 	UART_NO_USE_TIMER = 0,
 	UART_USE_TIMER,
@@ -173,6 +175,10 @@ static inline void sw_uart_enable_ier_thri(struct uart_port *port)
 		sw_uport->ier |= SUNXI_UART_IER_THRI;
 		SERIAL_DBG("start tx, ier %x\n", sw_uport->ier);
 		serial_out(port, sw_uport->ier, SUNXI_UART_IER);
+#if RS485_DEBUG
+		if (sw_uport->rs485defer) 
+			printk("uart: sw_uart_enable_ier_thri\n");
+#endif			
 	}
 }
 
@@ -184,6 +190,10 @@ static inline void sw_uart_disable_ier_thri(struct uart_port *port)
 		sw_uport->ier &= ~SUNXI_UART_IER_THRI;
 		SERIAL_DBG("stop tx, ier %x\n", sw_uport->ier);
 		serial_out(port, sw_uport->ier, SUNXI_UART_IER);
+#if RS485_DEBUG
+		if (sw_uport->rs485defer) 
+			printk("uart: sw_uart_disable_ier_thri\n");
+#endif
 	}
 }
 
@@ -312,10 +322,20 @@ static void sw_uart_check_rs485_defer(struct sw_uart_port *sw_uport)
 
 static void sw_uart_tx_onoff(struct sw_uart_port *sw_uport, u8 onoff)
 {
-	u32 flags = sw_uport->rs485conf.flags;
-
-	/* set RX-while-TX mode in rs485 mode */
+	/* check the rs485 mode is enabled */
 	if (sw_uport->rs485defer) {
+		u32 flags = sw_uport->rs485conf.flags;
+#if RS485_DEBUG
+		if (onoff) {
+			printk("uart: tx_gpio ON\n");
+		} else {
+			printk("uart: tx_gpio OFF\n");
+		}
+#endif
+		/* ensure a pending timer is stopped */
+		if (onoff) {
+			hrtimer_cancel(&sw_uport->rs485hrtimer);
+		}
 		sw_uport->mcr &= ~SUNXI_UART_MCR_MODE_MASK;
 		/* in RS485 mode the RX is disabled */
 		if (sw_uport->rs485conf.flags & SER_RS485_RX_DURING_TX) {
@@ -324,21 +344,17 @@ static void sw_uart_tx_onoff(struct sw_uart_port *sw_uport, u8 onoff)
 			sw_uport->mcr |= onoff ? SUNXI_UART_MCR_MODE_RS485 : SUNXI_UART_MCR_MODE_UART;
 		}
 		serial_out(&sw_uport->port, sw_uport->mcr, SUNXI_UART_MCR);
-	
-		/* ensure a pending timer is stopped */
-		if (onoff) {
-			hrtimer_cancel(&sw_uport->rs485hrtimer);
+		
+		/* Auto TX GPIO on / off - only in RS485 mode*/
+		if (gpio_is_valid(sw_uport->rs485entxgpio)) {
+			u8 gpioState;
+			if (onoff) {
+				gpioState = flags & SER_RS485_RTS_ON_SEND ? 1 : 0;
+			} else {
+				gpioState = flags & SER_RS485_RTS_AFTER_SEND ? 1 : 0;
+			}
+			gpio_direction_output(sw_uport->rs485entxgpio, gpioState);
 		}
-	}
-	/* TX GPIO on / off */
-	if (gpio_is_valid(sw_uport->rs485entxgpio)) {
-		u8 gpioState;
-		if (onoff) {
-			gpioState = flags & SER_RS485_RTS_ON_SEND ? 1 : 0;
-		} else {
-			gpioState = flags & SER_RS485_RTS_AFTER_SEND ? 1 : 0;
-		}
-		gpio_direction_output(sw_uport->rs485entxgpio, gpioState);
 	}
 }
 
@@ -362,6 +378,16 @@ static void sw_uart_handle_tx(struct sw_uart_port *sw_uport)
 	}
 	if (uart_circ_empty(xmit) || uart_tx_stopped(&sw_uport->port)) {
 		sw_uart_stop_tx(&sw_uport->port);
+		if (sw_uport->rs485defer) {
+			if (sw_uport->rs485entxcnt > 1) {
+				sw_uart_disable_ier_thri(&sw_uport->port);
+				sw_uart_tx_onoff(sw_uport, 0);
+#if RS485_DEBUG
+				printk("uart: circ empty (%d)\n", sw_uport->rs485entxcnt);
+#endif
+				sw_uport->rs485entxcnt = 0;
+			}
+		}
 		return;
 	}
 
@@ -789,7 +815,7 @@ static enum hrtimer_restart sw_uart_report_dma_rx (struct hrtimer *hrt)
 static enum hrtimer_restart sw_uart_rs485_tx_timer (struct hrtimer *hrt)
 {
 	struct sw_uart_port* sw_uport = container_of(hrt, struct sw_uart_port, rs485hrtimer);
-
+	
 	sw_uart_tx_onoff(sw_uport, 0);
 	return HRTIMER_NORESTART;
 }
@@ -800,11 +826,13 @@ static irqreturn_t sw_uart_irq(int irq, void *dev_id)
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 	unsigned int iir = 0, lsr = 0;
 	unsigned long flags;
+	unsigned int lsrOrig = 0;
 
 	spin_lock_irqsave(&port->lock, flags);
 
 	iir = serial_in(port, SUNXI_UART_IIR) & SUNXI_UART_IIR_IID_MASK;
 	lsr = serial_in(port, SUNXI_UART_LSR);
+	lsrOrig = lsr;
 	SERIAL_DBG("irq: iir %x lsr %x\n", iir, lsr);
 
 	if (iir == SUNXI_UART_IIR_IID_BUSBSY) {
@@ -818,7 +846,11 @@ static irqreturn_t sw_uart_irq(int irq, void *dev_id)
 		sw_uart_modem_status(sw_uport);
 		
 		/* TX Register is empty but TX FIFO not yet empty in rs485defer mode */
-		if (sw_uport->rs485defer && (lsr & SUNXI_UART_LSR_THRE) && !(lsr & SUNXI_UART_LSR_TEMT)) {
+		if (sw_uport->rs485defer && (lsrOrig & SUNXI_UART_LSR_THRE) && !(lsrOrig & SUNXI_UART_LSR_TEMT)) {
+#if RS485_DEBUG
+			printk("uart: off intr iir=%08x lsr=%08x\n", iir, lsrOrig);
+#endif
+			sw_uport->rs485entxcnt=0;
 			sw_uart_disable_ier_thri(port);
 			/* schedule a timer to disable entx */
 			hrtimer_start(&sw_uport->rs485hrtimer, ns_to_ktime(sw_uport->rs485defer * 1000),
@@ -829,7 +861,15 @@ static irqreturn_t sw_uart_irq(int irq, void *dev_id)
 			#else
 			if (lsr & SUNXI_UART_LSR_THRE)
 			#endif
+			{
+				if (sw_uport->rs485defer) {
+					sw_uport->rs485entxcnt++;
+#if RS485_DEBUG
+					printk("uart: handle tx iir=%08x lsr=%08x\n", iir, lsrOrig);
+#endif
+				}
 				sw_uart_handle_tx(sw_uport);
+			}
 		}
 	}
 
