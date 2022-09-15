@@ -68,8 +68,7 @@
 			label = "Power Button";
 			gpios = <&r_pio PM 0 0 1 0 0>;
 			gpio-key,wakeup;
-			linux,code = <KEY_SLEEP>; //linux
-			//linux,code = <KEY_POWER>; //android
+			linux,code = <KEY_POWER>;
 		};
 	};
 };
