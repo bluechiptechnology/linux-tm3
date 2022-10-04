@@ -198,3 +198,7 @@
 	status = "disabled";	
 };
 
+&pcie
+{
+       status = "okay";
+};
