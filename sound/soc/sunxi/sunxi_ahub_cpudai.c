@@ -255,15 +255,21 @@ static int sunxi_ahub_i2s_capture_route_disable(
 	return 0;
 }
 
+static int sunxi_ahub_cpudai_trigger(struct snd_pcm_substream *substream,
+				int cmd, struct snd_soc_dai *dai);
+
 static int sunxi_ahub_cpudai_startup(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
 	struct sunxi_ahub_cpudai_priv *sunxi_ahub_cpudai =
 					snd_soc_dai_get_drvdata(dai);
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		snd_soc_dai_set_dma_data(dai, substream,
 					&sunxi_ahub_cpudai->playback_dma_param);
+		/* BCT - start early to prevent sound POP after the DCLASS Amp was turned on */
+		sunxi_ahub_cpudai_trigger(substream, SNDRV_PCM_TRIGGER_START, dai);
+	}
 	else
 		snd_soc_dai_set_dma_data(dai, substream,
 					&sunxi_ahub_cpudai->capture_dma_param);

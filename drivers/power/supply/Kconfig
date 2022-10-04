@@ -600,4 +600,11 @@ config AXP20X_POWER
 	  This driver provides support for the power supply features of
 	  AXP20x PMIC.
 
+config AC_POWER
+	bool "AC Power driver"
+	help
+	  Say Y to enable support for AC power driver.
+
+
+
 endif # POWER_SUPPLY

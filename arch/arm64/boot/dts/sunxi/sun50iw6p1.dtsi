@@ -684,9 +684,9 @@
 			gpr_cur_pos = <6>;
 		};
 
-		wdt: watchdog@030090a0 {
+		wdt: watchdog@07020400 {
 			compatible = "allwinner,sun50i-wdt";
-			reg = <0x0 0x030090a0 0x0 0x20>;
+			reg = <0x0 0x07020400 0x0 0x20>;
 			interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
 		};
 

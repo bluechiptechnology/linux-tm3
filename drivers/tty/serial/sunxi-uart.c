@@ -43,6 +43,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_address.h>
+#include <linux/of_gpio.h>
 
 #include "sunxi-uart.h"
 
@@ -72,6 +73,10 @@
 #define SERIAL_CIRC_CNT_TO_END(xmit) \
 	CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE)
 
+#define DRIVER_NAME "sunxi-uart"
+
+#define RS485_DEBUG 0
+
 enum uart_time_use {
 	UART_NO_USE_TIMER = 0,
 	UART_USE_TIMER,
@@ -88,7 +93,7 @@ static void sw_uart_release_dma_rx(struct sw_uart_port *sw_uport);
 static int sw_uart_init_dma_rx(struct sw_uart_port *sw_uport);
 static int sw_uart_start_dma_rx(struct sw_uart_port *sw_uport);
 static void sw_uart_update_rb_addr(struct sw_uart_port *sw_uport);
-static void sw_uart_report_dma_rx(unsigned long uart);
+static enum hrtimer_restart  sw_uart_report_dma_rx(struct hrtimer *rx_hrtimer);
 #endif
 
 #ifdef CONFIG_SW_UART_DUMP_DATA
@@ -170,6 +175,10 @@ static inline void sw_uart_enable_ier_thri(struct uart_port *port)
 		sw_uport->ier |= SUNXI_UART_IER_THRI;
 		SERIAL_DBG("start tx, ier %x\n", sw_uport->ier);
 		serial_out(port, sw_uport->ier, SUNXI_UART_IER);
+#if RS485_DEBUG
+		if (sw_uport->rs485defer) 
+			printk("uart: sw_uart_enable_ier_thri\n");
+#endif			
 	}
 }
 
@@ -181,6 +190,10 @@ static inline void sw_uart_disable_ier_thri(struct uart_port *port)
 		sw_uport->ier &= ~SUNXI_UART_IER_THRI;
 		SERIAL_DBG("stop tx, ier %x\n", sw_uport->ier);
 		serial_out(port, sw_uport->ier, SUNXI_UART_IER);
+#if RS485_DEBUG
+		if (sw_uport->rs485defer) 
+			printk("uart: sw_uart_disable_ier_thri\n");
+#endif
 	}
 }
 
@@ -205,6 +218,8 @@ static unsigned int sw_uart_handle_rx(struct sw_uart_port *sw_uport, unsigned in
 #ifdef CONFIG_SW_UART_DUMP_DATA
 			sw_uport->dump_buff[sw_uport->dump_len++] = ch;
 #endif
+		} else {
+			ch = 0;
 		}
 
 		flag = TTY_NORMAL;
@@ -223,7 +238,7 @@ static unsigned int sw_uart_handle_rx(struct sw_uart_port *sw_uport, unsigned in
 				 * may get masked by ignore_status_mask
 				 * or read_status_mask.
 				 */
-				if (uart_handle_break(&sw_uport->port))
+				if (!ch && uart_handle_break(&sw_uport->port))
 					goto ignore_char;
 			} else if (lsr & SUNXI_UART_LSR_PE)
 				sw_uport->port.icount.parity++;
@@ -266,14 +281,17 @@ ignore_char:
 
 static void sw_uart_stop_tx(struct uart_port *port)
 {
-#ifdef CONFIG_SERIAL_SUNXI_DMA
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+
+#ifdef CONFIG_SERIAL_SUNXI_DMA
 	struct sw_uart_dma *uart_dma = sw_uport->dma;
 
 	if (uart_dma->use_dma & TX_DMA)
 		sw_uart_stop_dma_tx(sw_uport);
 #endif
-	sw_uart_disable_ier_thri(port);
+	if (!sw_uport->rs485defer) {
+		sw_uart_disable_ier_thri(port);
+	}
 }
 
 static void sw_uart_start_tx(struct uart_port *port)
@@ -286,12 +304,69 @@ static void sw_uart_start_tx(struct uart_port *port)
 		sw_uart_enable_ier_thri(port);
 }
 
+static void sw_uart_check_rs485_defer(struct sw_uart_port *sw_uport)
+{
+	u32 flags = sw_uport->rs485conf.flags;
+
+	if (flags & SER_RS485_ENABLED) {
+		unsigned int ns_per_baud = 1000000000 / sw_uport->baud;
+		/* worst case scenario: 8 data bits + start + stop bits + 2 parity bits */
+		sw_uport->rs485defer = (ns_per_baud * 12) / 1000;
+		if (sw_uport->rs485defer < 1) {
+			sw_uport->rs485defer = 1;
+		}
+	} else {
+		sw_uport->rs485defer = 0;
+	}
+}
+
+static void sw_uart_tx_onoff(struct sw_uart_port *sw_uport, u8 onoff)
+{
+	/* check the rs485 mode is enabled */
+	if (sw_uport->rs485defer) {
+		u32 flags = sw_uport->rs485conf.flags;
+#if RS485_DEBUG
+		if (onoff) {
+			printk("uart: tx_gpio ON\n");
+		} else {
+			printk("uart: tx_gpio OFF\n");
+		}
+#endif
+		/* ensure a pending timer is stopped */
+		if (onoff) {
+			hrtimer_cancel(&sw_uport->rs485hrtimer);
+		}
+		sw_uport->mcr &= ~SUNXI_UART_MCR_MODE_MASK;
+		/* in RS485 mode the RX is disabled */
+		if (sw_uport->rs485conf.flags & SER_RS485_RX_DURING_TX) {
+			sw_uport->mcr |= SUNXI_UART_MCR_MODE_UART;
+		} else {
+			sw_uport->mcr |= onoff ? SUNXI_UART_MCR_MODE_RS485 : SUNXI_UART_MCR_MODE_UART;
+		}
+		serial_out(&sw_uport->port, sw_uport->mcr, SUNXI_UART_MCR);
+		
+		/* Auto TX GPIO on / off - only in RS485 mode*/
+		if (gpio_is_valid(sw_uport->rs485entxgpio)) {
+			u8 gpioState;
+			if (onoff) {
+				gpioState = flags & SER_RS485_RTS_ON_SEND ? 1 : 0;
+			} else {
+				gpioState = flags & SER_RS485_RTS_AFTER_SEND ? 1 : 0;
+			}
+			gpio_direction_output(sw_uport->rs485entxgpio, gpioState);
+		}
+	}
+}
+
+
 static void sw_uart_handle_tx(struct sw_uart_port *sw_uport)
 {
 	struct circ_buf *xmit = &sw_uport->port.state->xmit;
 	int count;
 
+	/* handle xon off/on character */
 	if (sw_uport->port.x_char) {
+		sw_uart_tx_onoff(sw_uport, 1);
 		serial_out(&sw_uport->port, sw_uport->port.x_char, SUNXI_UART_THR);
 		sw_uport->port.icount.tx++;
 		sw_uport->port.x_char = 0;
@@ -303,17 +378,30 @@ static void sw_uart_handle_tx(struct sw_uart_port *sw_uport)
 	}
 	if (uart_circ_empty(xmit) || uart_tx_stopped(&sw_uport->port)) {
 		sw_uart_stop_tx(&sw_uport->port);
+		if (sw_uport->rs485defer) {
+			if (sw_uport->rs485entxcnt > 1) {
+				sw_uart_disable_ier_thri(&sw_uport->port);
+				sw_uart_tx_onoff(sw_uport, 0);
+#if RS485_DEBUG
+				printk("uart: circ empty (%d)\n", sw_uport->rs485entxcnt);
+#endif
+				sw_uport->rs485entxcnt = 0;
+			}
+		}
 		return;
 	}
 
 #ifdef CONFIG_SERIAL_SUNXI_DMA
 	if (sw_uport->dma->use_dma & TX_DMA) {
 		if (SERIAL_CIRC_CNT_TO_END(xmit) >= DMA_TX_TRRIGE_LEVEL) {
+			sw_uart_tx_onoff(sw_uport, 1);
 			sw_uart_start_dma_tx(sw_uport);
 			return;
 		}
 	}
 #endif
+
+	sw_uart_tx_onoff(sw_uport, 1);
 
 	count = sw_uport->port.fifosize / 2;
 	do {
@@ -573,7 +661,7 @@ static void sw_uart_stop_dma_rx(struct sw_uart_port *sw_uport)
 	struct sw_uart_dma *uart_dma = sw_uport->dma;
 
 	if (uart_dma && uart_dma->rx_dma_used) {
-		del_timer(&uart_dma->rx_timer);
+		hrtimer_cancel(&sw_uport->rx_hrtimer);
 		dmaengine_terminate_all(uart_dma->dma_chan_rx);
 		uart_dma->rb_tail = 0;
 		uart_dma->rx_dma_used = 0;
@@ -669,8 +757,8 @@ static int sw_uart_start_dma_rx(struct sw_uart_port *sw_uport)
 
 	uart_dma->rx_dma_used = 1;
 	if (uart_dma->use_timer == 1) {
-		mod_timer(&uart_dma->rx_timer,
-			jiffies + msecs_to_jiffies(uart_dma->rx_timeout));
+		hrtimer_start(&sw_uport->rx_hrtimer, ms_to_ktime(uart_dma->rx_timeout),
+				HRTIMER_MODE_REL);
 	}
 	return 1;
 }
@@ -691,15 +779,15 @@ static void sw_uart_update_rb_addr(struct sw_uart_port *sw_uport)
 	}
 }
 
-static void sw_uart_report_dma_rx(unsigned long uart)
+static enum hrtimer_restart sw_uart_report_dma_rx (struct hrtimer *hrt)
 {
 	int count, flip = 0;
-	struct sw_uart_port *sw_uport = (struct sw_uart_port *)uart;
+	struct sw_uart_port* sw_uport = container_of(hrt, struct sw_uart_port, rx_hrtimer);
 	struct uart_port *port = &sw_uport->port;
 	struct sw_uart_dma *uart_dma = sw_uport->dma;
 
 	if (!uart_dma->rx_dma_used || !port->state->port.tty)
-		return;
+		return HRTIMER_NORESTART;
 
 	sw_uart_update_rb_addr(sw_uport);
 	while (1) {
@@ -715,12 +803,22 @@ static void sw_uart_report_dma_rx(unsigned long uart)
 			(uart_dma->rb_tail + count) & (uart_dma->rb_size - 1);
 	}
 
-	if (uart_dma->use_timer == 1)
-		mod_timer(&uart_dma->rx_timer,
-			jiffies + msecs_to_jiffies(uart_dma->rx_timeout));
+	if (uart_dma->use_timer == 1) {
+		hrtimer_forward_now(&sw_uport->rx_hrtimer, ms_to_ktime(uart_dma->rx_timeout));
+		return HRTIMER_RESTART;
+	}
+	return HRTIMER_NORESTART;
 }
 
 #endif
+
+static enum hrtimer_restart sw_uart_rs485_tx_timer (struct hrtimer *hrt)
+{
+	struct sw_uart_port* sw_uport = container_of(hrt, struct sw_uart_port, rs485hrtimer);
+	
+	sw_uart_tx_onoff(sw_uport, 0);
+	return HRTIMER_NORESTART;
+}
 
 static irqreturn_t sw_uart_irq(int irq, void *dev_id)
 {
@@ -728,11 +826,13 @@ static irqreturn_t sw_uart_irq(int irq, void *dev_id)
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 	unsigned int iir = 0, lsr = 0;
 	unsigned long flags;
+	unsigned int lsrOrig = 0;
 
 	spin_lock_irqsave(&port->lock, flags);
 
 	iir = serial_in(port, SUNXI_UART_IIR) & SUNXI_UART_IIR_IID_MASK;
 	lsr = serial_in(port, SUNXI_UART_LSR);
+	lsrOrig = lsr;
 	SERIAL_DBG("irq: iir %x lsr %x\n", iir, lsr);
 
 	if (iir == SUNXI_UART_IIR_IID_BUSBSY) {
@@ -744,12 +844,33 @@ static irqreturn_t sw_uart_irq(int irq, void *dev_id)
 		else if (iir & SUNXI_UART_IIR_IID_CHARTO)
 			serial_in(&sw_uport->port, SUNXI_UART_RBR);
 		sw_uart_modem_status(sw_uport);
-		#ifdef CONFIG_SW_UART_PTIME_MODE
-		if (iir == SUNXI_UART_IIR_IID_THREMP)
-		#else
-		if (lsr & SUNXI_UART_LSR_THRE)
-		#endif
-			sw_uart_handle_tx(sw_uport);
+		
+		/* TX Register is empty but TX FIFO not yet empty in rs485defer mode */
+		if (sw_uport->rs485defer && (lsrOrig & SUNXI_UART_LSR_THRE) && !(lsrOrig & SUNXI_UART_LSR_TEMT)) {
+#if RS485_DEBUG
+			printk("uart: off intr iir=%08x lsr=%08x\n", iir, lsrOrig);
+#endif
+			sw_uport->rs485entxcnt=0;
+			sw_uart_disable_ier_thri(port);
+			/* schedule a timer to disable entx */
+			hrtimer_start(&sw_uport->rs485hrtimer, ns_to_ktime(sw_uport->rs485defer * 1000),
+				HRTIMER_MODE_REL);
+		} else {
+			#ifdef CONFIG_SW_UART_PTIME_MODE
+			if (iir == SUNXI_UART_IIR_IID_THREMP)
+			#else
+			if (lsr & SUNXI_UART_LSR_THRE)
+			#endif
+			{
+				if (sw_uport->rs485defer) {
+					sw_uport->rs485entxcnt++;
+#if RS485_DEBUG
+					printk("uart: handle tx iir=%08x lsr=%08x\n", iir, lsrOrig);
+#endif
+				}
+				sw_uart_handle_tx(sw_uport);
+			}
+		}
 	}
 
 	spin_unlock_irqrestore(&port->lock, flags);
@@ -881,7 +1002,7 @@ static inline void wait_for_xmitr(struct sw_uart_port *sw_uport)
 }
 
 /* Enable or disable the RS485 support */
-static void sw_uart_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
+static int sw_uart_config_rs485(struct uart_port *port, struct serial_rs485 *rs485conf)
 {
 	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
 
@@ -890,21 +1011,16 @@ static void sw_uart_config_rs485(struct uart_port *port, struct serial_rs485 *rs
 	sw_uport->mcr &= ~SUNXI_UART_MCR_MODE_MASK;
 	if (rs485conf->flags & SER_RS485_ENABLED) {
 		SERIAL_DBG("setting to rs485\n");
-		sw_uport->mcr |= SUNXI_UART_MCR_MODE_RS485;
-
-		/*
-		 * In NMM mode and no 9th bit(default RS485 mode), uart receive
-		 * all the bytes into FIFO before receveing an address byte
-		 */
-		sw_uport->rs485 |= SUNXI_UART_RS485_RXBFA;
 	} else {
 		SERIAL_DBG("setting to uart\n");
-		sw_uport->mcr |= SUNXI_UART_MCR_MODE_UART;
-		sw_uport->rs485 = 0;
 	}
-
+	sw_uport->mcr |= SUNXI_UART_MCR_MODE_UART;
+	sw_uport->rs485 = 0;
 	serial_out(port, sw_uport->mcr, SUNXI_UART_MCR);
 	serial_out(port, sw_uport->rs485, SUNXI_UART_RS485);
+
+	sw_uart_check_rs485_defer(sw_uport);
+	return 0;
 }
 
 static unsigned int sw_uart_tx_empty(struct uart_port *port)
@@ -1147,8 +1263,21 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	if ((termios->c_cflag & CREAD) == 0)
 		port->ignore_status_mask |= SUNXI_UART_LSR_DR;
 
-	sw_uport->fcr = SUNXI_UART_FCR_RXTRG_1_2 | SUNXI_UART_FCR_TXTRG_1_2
-			| SUNXI_UART_FCR_FIFO_EN;
+	sw_uport->fcr = SUNXI_UART_FCR_TXTRG_1_2 | SUNXI_UART_FCR_FIFO_EN;
+
+
+	/* FIFO buffer total size is 256 bytes */
+	if (sw_uport->rxtl_uart >= 32 && sw_uport->rxtl_uart < 96) {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_1_4;
+	} else
+	if (sw_uport->rxtl_uart >= 96 && sw_uport->rxtl_uart < 192) {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_1_2;
+	} else
+	if (sw_uport->rxtl_uart >= 192) {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_FULL;
+	} else {
+		sw_uport->fcr |= SUNXI_UART_FCR_RXTRG_1CH;
+	}
 	serial_out(port, sw_uport->fcr, SUNXI_UART_FCR);
 
 	sw_uport->lcr = lcr;
@@ -1156,6 +1285,8 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	sw_uport->dlh = dlh;
 	sw_uart_force_lcr(sw_uport, 50);
 
+	/* clear rxfifo after set lcr & baud to discard existing data in FIFO */
+	serial_out(port, sw_uport->fcr|SUNXI_UART_FCR_RXFIFO_RST, SUNXI_UART_FCR);
 	port->ops->set_mctrl(port, port->mctrl);
 
 	sw_uport->ier = SUNXI_UART_IER_RLSI | SUNXI_UART_IER_RDI;
@@ -1171,9 +1302,9 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 #endif
 	/* flow control */
 	sw_uport->mcr &= ~SUNXI_UART_MCR_AFE;
-	port->status &= ~UPSTAT_AUTOCTS;
+	port->status &= ~(UPSTAT_AUTOCTS | UPSTAT_AUTORTS);
 	if (termios->c_cflag & CRTSCTS) {
-		port->status |= UPSTAT_AUTOCTS;
+		port->status |= UPSTAT_AUTOCTS | UPSTAT_AUTORTS;
 		sw_uport->mcr |= SUNXI_UART_MCR_AFE;
 	}
 	serial_out(port, sw_uport->mcr, SUNXI_UART_MCR);
@@ -1197,6 +1328,9 @@ static void sw_uart_set_termios(struct uart_port *port, struct ktermios *termios
 	SERIAL_DBG("termios lcr 0x%x fcr 0x%x mcr 0x%x dll 0x%x dlh 0x%x\n",
 			sw_uport->lcr, sw_uport->fcr, sw_uport->mcr,
 			sw_uport->dll, sw_uport->dlh);
+	
+	sw_uport->baud = baud;
+	sw_uart_check_rs485_defer(sw_uport);
 }
 
 static const char *sw_uart_type(struct uart_port *port)
@@ -1728,6 +1862,12 @@ static int sw_uart_release_resource(struct sw_uart_port *sw_uport, struct sw_uar
 {
 	SERIAL_DBG("put system resource(clk & IO)\n");
 
+	hrtimer_cancel(&sw_uport->rs485hrtimer);
+	
+	#ifdef CONFIG_SERIAL_SUNXI_DMA
+	hrtimer_cancel(&sw_uport->rx_hrtimer);
+	#endif
+
 	#ifdef CONFIG_SW_UART_DUMP_DATA
 	kfree(sw_uport->dump_buff);
 	sw_uport->dump_buff = NULL;
@@ -1785,6 +1925,138 @@ static int __init sunxi_early_console_setup(struct earlycon_device *dev,
 }
 OF_EARLYCON_DECLARE(uart0, "", sunxi_early_console_setup);
 #endif	/* CONFIG_SERIAL_SUNXI_EARLYCON */
+
+#ifdef CONFIG_SERIAL_SUNXI_DMA
+static ssize_t dmaenabled_show(struct device * dev, struct device_attribute *attr, char * buf)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+
+	return sprintf(buf, "%d\n", sw_uport->dma->use_dma ? 1 : 0);
+}
+
+static ssize_t dmaenabled_store(struct device * dev, struct device_attribute *attr, const char * buf, size_t n)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+	int val, ret;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	switch (val) {
+	case 0:
+		sw_uport->dma->use_dma = 0;
+		break;
+	case 1: {
+		int state = sw_uport->dma->use_dma;
+		sw_uport->dma->use_dma = TX_DMA | RX_DMA;
+		/* if DMA was not previously enabled - initialise it */
+		if (state == 0) {
+			sw_uart_init_dma_rx(sw_uport);
+			sw_uart_init_dma_tx(sw_uport);
+		}
+		}
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret ? : n;
+}
+
+static DEVICE_ATTR(dmaenabled, 0644, dmaenabled_show, dmaenabled_store);
+#endif /* CONFIG_SERIAL_SUNXI_DMA */
+
+
+static ssize_t rxfifothreshold_show(struct device * dev, struct device_attribute *attr, char * buf)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+
+	return sprintf(buf, "%d\n", sw_uport->rxtl_uart);
+}
+
+static ssize_t rxfifothreshold_store(struct device * dev, struct device_attribute *attr, const char * buf, size_t n)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+	int val, ret;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	if (val > 256 || val < 1)
+	{
+		ret = -EINVAL;
+	}
+	else
+	{
+		sw_uport->rxtl_uart = val;
+	}
+
+	return ret ? : n;
+}
+
+static DEVICE_ATTR(rxfifothreshold, 0644, rxfifothreshold_show, rxfifothreshold_store);
+
+static ssize_t rs485txenablegpio_show(struct device * dev, struct device_attribute *attr, char * buf)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+
+	if (gpio_is_valid(sw_uport->rs485entxgpio))
+	{
+		return sprintf(buf, "%d\n", sw_uport->rs485entxgpio);
+	}
+
+	return sprintf(buf, "-1\n");
+}
+
+static ssize_t rs485txenablegpio_store(struct device * dev, struct device_attribute *attr, const char * buf, size_t n)
+{
+	struct uart_port *port = dev_get_drvdata(dev);
+	struct sw_uart_port *sw_uport = UART_TO_SPORT(port);
+	int val, ret;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	if (!gpio_is_valid(val))
+	{
+		ret = -EINVAL;
+	}
+	else
+	{
+		if(gpio_is_valid(sw_uport->rs485entxgpio))
+		{
+			gpio_free(sw_uport->rs485entxgpio);
+			sw_uport->rs485entxgpio = -1;
+		}
+
+		sw_uport->rs485entxgpio = val;
+		ret = devm_gpio_request(dev, sw_uport->rs485entxgpio, DRIVER_NAME);
+		if (ret) {
+			dev_err(dev, "Failed to request RS485 EnTx GPIO: %d\n", sw_uport->rs485entxgpio);
+			sw_uport->rs485entxgpio = -1;
+		}
+		else
+		{
+			//default RS485 TxEn to off
+			gpio_direction_output(sw_uport->rs485entxgpio, 0);
+			//Export TxEn so that existing software will work
+			gpio_export(sw_uport->rs485entxgpio, true);
+		}
+	}
+	
+	return ret ? : n;
+}
+
+static DEVICE_ATTR(rs485txenablegpio, 0644, rs485txenablegpio_show, rs485txenablegpio_store);
 
 static int sw_uart_probe(struct platform_device *pdev)
 {
@@ -1919,6 +2191,30 @@ static int sw_uart_probe(struct platform_device *pdev)
 	if (of_property_read_bool(np, "linux,rs485-enabled-at-boot-time"))
 		sw_uport->rs485conf.flags |= SER_RS485_ENABLED;
 
+	port->rs485_config = sw_uart_config_rs485;
+	
+	sw_uport->rs485entxgpio = of_get_named_gpio(np, "rs485entx", 0);
+	if (gpio_is_valid(sw_uport->rs485entxgpio))
+	{
+		dev_err(&pdev->dev, "Using GPIO %d as RS485 Transmit Enable\n", sw_uport->rs485entxgpio);
+
+		ret = devm_gpio_request(&pdev->dev, sw_uport->rs485entxgpio, DRIVER_NAME);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to request RS485 EnTx GPIO: %d\n", sw_uport->rs485entxgpio);
+		}
+		else
+		{
+			/* default RS485 TxEn to off */
+			gpio_direction_output(sw_uport->rs485entxgpio, 0);
+			/* Export TxEn so that existing software will work */
+			gpio_export(sw_uport->rs485entxgpio, false);
+		}
+	}
+	hrtimer_init(&sw_uport->rs485hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	sw_uport->rs485hrtimer.function = sw_uart_rs485_tx_timer;
+
+	sw_uport->rxtl_uart = 128; /* half of the FIFO buffer */
+
 	pdata->used = 1;
 	port->iotype = UPIO_MEM;
 	port->type = PORT_SUNXI;
@@ -1930,15 +2226,12 @@ static int sw_uart_probe(struct platform_device *pdev)
 #ifdef CONFIG_SERIAL_SUNXI_DMA
 	/* set dma config */
 	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
-	if (sw_uport->dma->use_dma & RX_DMA) {
+	if (sw_uport->dma) {
 		/* timer */
 		sw_uport->dma->use_timer = UART_USE_TIMER;
-		sw_uport->dma->rx_timer.function = sw_uart_report_dma_rx;
-		sw_uport->dma->rx_timer.data = (unsigned long)sw_uport;
+		hrtimer_init(&sw_uport->rx_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		sw_uport->rx_hrtimer.function = sw_uart_report_dma_rx;
 		sw_uport->dma->rx_timeout = 5;
-		sw_uport->dma->rx_timer.expires =
-			jiffies + msecs_to_jiffies(sw_uport->dma->rx_timeout);
-		init_timer(&sw_uport->dma->rx_timer);
 
 		/* rx buffer */
 		sw_uport->dma->rb_size = DMA_SERIAL_BUFFER_SIZE;
@@ -1956,11 +2249,10 @@ static int sw_uart_probe(struct platform_device *pdev)
 			dev_info(sw_uport->port.dev,
 		"dma_rx_phy 0x%08x\n", (unsigned)sw_uport->dma->rx_phy_addr);
 		}
+		if (sw_uport->dma->use_dma & RX_DMA) {
+			sw_uart_init_dma_rx(sw_uport);
+		}
 
-		sw_uart_init_dma_rx(sw_uport);
-	}
-
-	if (sw_uport->dma->use_dma & TX_DMA) {
 		/* tx buffer */
 		sw_uport->dma->tb_size = UART_XMIT_SIZE;
 		sw_uport->dma->tx_buffer = dma_alloc_coherent(
@@ -1975,12 +2267,28 @@ static int sw_uart_probe(struct platform_device *pdev)
 			dev_info(sw_uport->port.dev, "dma_tx_phy 0x%08x\n",
 					(unsigned) sw_uport->dma->tx_phy_addr);
 		}
-		sw_uart_init_dma_tx(sw_uport);
+		if (sw_uport->dma->use_dma & TX_DMA) {
+			sw_uart_init_dma_tx(sw_uport);
+		}
 	}
 
 #endif
 
 	sunxi_uart_sysfs(pdev);
+
+	ret = device_create_file(&pdev->dev, &dev_attr_rxfifothreshold);
+	if (ret < 0)
+		dev_err(&pdev->dev, "failed to add rxfifothreshold attr.\n");
+
+#ifdef CONFIG_SERIAL_SUNXI_DMA
+	ret = device_create_file(&pdev->dev, &dev_attr_dmaenabled);
+	if (ret < 0)
+		dev_err(&pdev->dev, "failed to add dmaenable attr.\n");
+#endif
+
+	ret = device_create_file(&pdev->dev, &dev_attr_rs485txenablegpio);
+	if (ret < 0)
+		dev_err(&pdev->dev, "failed to add rs485txenablegpio attr.\n");
 
 
 	SERIAL_DBG("add uart%d port, port_type %d, uartclk %d\n",
@@ -1996,7 +2304,10 @@ static int sw_uart_remove(struct platform_device *pdev)
 #ifdef CONFIG_SERIAL_SUNXI_DMA
 	sw_uart_release_dma_tx(sw_uport);
 	sw_uart_release_dma_rx(sw_uport);
+	device_remove_file(&pdev->dev, &dev_attr_dmaenabled);
 #endif
+	device_remove_file(&pdev->dev, &dev_attr_rs485txenablegpio);
+	device_remove_file(&pdev->dev, &dev_attr_rxfifothreshold);
 	sw_uart_release_resource(sw_uport, pdev->dev.platform_data);
 	return 0;
 }
