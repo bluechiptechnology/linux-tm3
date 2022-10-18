@@ -9,6 +9,7 @@
  */
 
 #include <linux/backlight.h>
+#include <drm/drm_modes.h>
 #include "disp_lcd.h"
 
 #if 0
@@ -60,6 +61,7 @@ struct disp_lcd_private_data {
 	atomic_t lcd_resetting;
 	struct work_struct reflush_work;
 	struct disp_lcd_esd_info esd_inf;
+	struct i2c_client* bridge;
 };
 static spinlock_t lcd_data_lock;
 
@@ -344,7 +346,7 @@ static s32 lcd_parse_panel_para(u32 disp, struct disp_panel_para *info)
 	return 0;
 }
 
-static void lcd_get_sys_config(u32 disp, struct disp_lcd_cfg *lcd_cfg)
+static void lcd_get_sys_config(u32 disp, struct disp_lcd_cfg *lcd_cfg, struct disp_lcd_private_data *lcdp)
 {
 	struct disp_gpio_set_t *gpio_info;
 	int value = 1;
@@ -417,6 +419,20 @@ static void lcd_get_sys_config(u32 disp, struct disp_lcd_cfg *lcd_cfg)
 			DEBUG(("LCD: Backlight defined\n"));
 		} else {
 			DEBUG(("LCD: Error: Backlight not defined\n"));
+		}
+	}
+
+	/* i2c_bridge */
+	{
+		struct device_node* lcd_root = disp_sys_script_get_root(primary_key);
+		struct device_node *bridge = of_parse_phandle(lcd_root, "bridge", 0);
+		if (bridge) {
+			lcdp->bridge = of_find_i2c_device_by_node(bridge);
+			of_node_put(bridge);
+			DEBUG(("LCD: Bridge defined\n"));
+		} else {
+			lcdp->bridge = NULL;
+			DEBUG(("LCD: Bridge not defined\n"));
 		}
 	}
 
@@ -852,6 +868,63 @@ static int lcd_calc_judge_line(struct disp_device *lcd)
 	return 0;
 }
 
+
+static void disp_bridge_command(struct disp_lcd_private_data *lcdp, int command)
+{
+	struct i2c_driver* driver;
+	if (NULL == lcdp || lcdp->bridge == NULL) {
+		return;
+	}
+	DEBUG(("DISP bridge driver command called: %d\n", command));
+	if (lcdp->bridge->dev.driver) {
+		driver = to_i2c_driver(lcdp->bridge->dev.driver);
+		if (driver == NULL) {
+			DEBUG(("DISP bridge driver not found\n"));
+		} else {
+			if (driver->command) {
+				u8 retry = 3;
+				struct drm_display_mode mode = {{0}};
+				DEBUG(("DISP bridge driver command found\n"));
+				mode.clock = lcdp->panel_info.lcd_dclk_freq * 1000; /* MHz -> kHz */
+				mode.hdisplay = lcdp->panel_info.lcd_x;
+				mode.vdisplay = lcdp->panel_info.lcd_y;
+				mode.htotal = lcdp->panel_info.lcd_ht;
+				mode.vtotal = lcdp->panel_info.lcd_vt;
+				//note: back porch value in lcdp also contains the sync pulse width!
+				mode.vsync_end = mode.vtotal - lcdp->panel_info.lcd_vbp + lcdp->panel_info.lcd_vspw; // total - back porch
+				mode.hsync_end = mode.htotal - lcdp->panel_info.lcd_hbp + lcdp->panel_info.lcd_hspw;
+				mode.vsync_start = mode.vsync_end - lcdp->panel_info.lcd_vspw; // sync_end - sync_pulse_width
+				mode.hsync_start = mode.hsync_end - lcdp->panel_info.lcd_hspw;
+				mode.flags = 0;
+
+				if (lcdp->panel_info.lcd_hv_sync_polarity) {
+					mode.flags |= DRM_MODE_FLAG_PHSYNC;
+					mode.flags |= DRM_MODE_FLAG_PVSYNC;
+					mode.flags |= DRM_MODE_FLAG_PCSYNC;
+				} else {
+					mode.flags |= DRM_MODE_FLAG_NHSYNC;
+					mode.flags |= DRM_MODE_FLAG_NVSYNC;
+					mode.flags |= DRM_MODE_FLAG_NCSYNC;
+				}
+				while(retry) {
+					int ret = driver->command(lcdp->bridge, command, &mode);
+					retry--;
+					if (ret == -EPROBE_DEFER) {
+						msleep(200);
+					} else {
+						retry = 0;
+					}
+				}
+			} else {
+				DEBUG(("DISP bridge driver command not found\n"));
+			}
+		}
+	} else {
+		DEBUG(("DISP bridge has no driver\n"));
+	}
+}
+
+
 #ifdef EINK_FLUSH_TIME_TEST
 struct timeval lcd_start, lcd_mid, lcd_mid1, lcd_mid2, lcd_end, t5_b, t5_e;
 struct timeval pin_b, pin_e, po_b, po_e, tocn_b, tcon_e;
@@ -1067,6 +1140,8 @@ static s32 disp_lcd_backlight_enable(struct disp_device *lcd)
 			    disp_sys_gpio_request(gpio_info, 1);
 		}
 
+		disp_bridge_command(lcdp, 1);
+
 		/* enable backlight */
 		if (lcdp->lcd_cfg.lcd_bl_device) {
 			DEBUG(("LCD: enabling backlight\n"));
@@ -1076,6 +1151,7 @@ static s32 disp_lcd_backlight_enable(struct disp_device *lcd)
 			lcdp->lcd_cfg.lcd_bl_device->props.state  &= ~BL_CORE_FBBLANK;
 			backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
 		}
+
 
 		bl = disp_lcd_get_bright(lcd);
 		disp_lcd_set_bright(lcd, bl);
@@ -1123,6 +1199,7 @@ static s32 disp_lcd_backlight_disable(struct disp_device *lcd)
 			backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
 			msleep(20);
 		}
+		disp_bridge_command(lcdp, 0);
 	}
 
 	return 0;
@@ -2598,7 +2675,7 @@ static s32 disp_lcd_init(struct disp_device *lcd)
 	}
 	DE_INF("lcd %d\n", lcd->disp);
 
-	lcd_get_sys_config(lcd->disp, &lcdp->lcd_cfg);
+	lcd_get_sys_config(lcd->disp, &lcdp->lcd_cfg, lcdp);
 	if (disp_lcd_is_used(lcd)) {
 		struct disp_video_timings *timmings;
 		struct disp_panel_para *panel_info;
