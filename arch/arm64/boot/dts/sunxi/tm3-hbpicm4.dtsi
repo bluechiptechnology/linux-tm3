@@ -45,12 +45,58 @@
 		allwinner,pull = <0>;
 	};
 
+	lcd0_pins_0: lcd0@0{
+		allwinner,pins = "PD0", "PD1", "PD2", "PD3", "PD4", "PD5", "PD6", "PD7", "PD8", "PD9", "PD10", "PD11", "PD12", "PD13", "PD14", "PD15", "PD16", "PD17", "PD18", "PD19";
+		allwinner,function = "lcd0";
+		allwinner,pname = "lcdd0", "lcdd1", "lcdd2", "lcdd3", "lcdd4", "lcdd5", "lcdd6", "lcdd7", "lcdd8", "lcdd9", "lcdd10", "lcdd11", "lcdd12", "lcdd13", "lcdd14", "lcdd15", "lcdd16", "lcdd17", "lcdd18", "lcdd19";
+		allwinner,muxsel = <0x2>;
+		allwinner,pull = <0x0>;
+		allwinner,drive = <0x03>;
+		allwinner,data = <0xffffffff>;
+	};
+
+	lcd0_pins_1: lcd0@1{
+		allwinner,pins = "PD0", "PD1", "PD2", "PD3", "PD4", "PD5", "PD6", "PD7", "PD8", "PD9", "PD10", "PD11", "PD12", "PD13", "PD14", "PD15", "PD16", "PD17", "PD18", "PD19";
+		allwinner,function = "lcd0";
+		allwinner,pname = "lcdd0", "lcdd1", "lcdd2", "lcdd3", "lcdd4", "lcdd5", "lcdd6", "lcdd7", "lcdd8", "lcdd9", "lcdd10", "lcdd11", "lcdd12", "lcdd13", "lcdd14", "lcdd15", "lcdd16", "lcdd17", "lcdd18", "lcdd19";
+		allwinner,muxsel = <0x7>;
+		allwinner,pull = <0x0>;
+		allwinner,drive = <0xffffffff>;
+		allwinner,data = <0xffffffff>;
+	};
+
+	pwm0_pins_0: pwm0@0 {
+		allwinner,pins = "PD22";
+		allwinner,function = "pwm0";
+		allwinner,pname = "pwm_positive";
+		allwinner,muxsel = <0x2>;
+		allwinner,pull = <0x0>;
+		allwinner,drive = <0xffffffff>;
+		allwinner,data = <0xffffffff>;
+	};
+
+	pwm0_pins_1: pwm0@1 {
+		allwinner,pins = "PD22";
+		allwinner,function = "pwm0";
+		allwinner,pname = "pwm_positive";
+		allwinner,muxsel = <0x7>;
+		allwinner,pull = <0x0>;
+		allwinner,drive = <0xffffffff>;
+		allwinner,data = <0xffffffff>;
+	};
 };
 
 &r_pio{
 	pinctrl-0 = <&rpio_pinctrl_hog_hostboard>;
 };
 
+&pwm0
+{
+	device_type = "pwm0";
+	pwm_used = <0x1>;
+	pinctrl-0 = <&pwm0_pins_0>;
+	pinctrl-1 = <&pwm0_pins_1>;
+};
 
 /*
 &boot_disp{
@@ -168,6 +214,10 @@
 	allwinner,pull = <1>;
 };
 
+// No sdcard present
+&sdc0 {
+	status = "disabled";
+};
 
 // Device type USB port
 &usbc0{
