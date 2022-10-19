@@ -20,7 +20,8 @@ dtb-$(CONFIG_ARCH_SUN50IW6P1) += sun50iw6p1-soc.dtb tm3-tm3.dtb tm3-tmxdevboard.
 				tm3-hb5-cb3-7-r.dtb \
 				tm3-hb5-cb3-9-c.dtb \
 				tm3-hb5-cb3-9-c.dtb \
-				tm3-hbpicm4-cm4io.dtb
+				tm3-hbpicm4-cm4io.dtb \
+				tm3-hbpicm4-reterm.dtb
 
 
 dtb-$(CONFIG_ARCH_SUN50IW8P1) += sun50iw8p1-fpga.dtb sun50iw8p1-soc.dtb
