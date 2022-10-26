@@ -84,10 +84,64 @@
 		allwinner,drive = <0xffffffff>;
 		allwinner,data = <0xffffffff>;
 	};
+
+	spi1_pins_a: spi1@0 {
+		allwinner,pins = "PH4", "PH5", "PH6";
+		allwinner,pname = "spi1_sclk", "spi1_mosi",
+					"spi1_miso";
+		allwinner,function = "spi1";
+		allwinner,muxsel = <2>;
+		allwinner,drive = <1>;
+		allwinner,pull = <0>;
+	};
+	spi1_pins_c: spi1@2 {
+		allwinner,pins = "PH4", "PH5", "PH6";
+		allwinner,function = "io_disabled";
+		allwinner,muxsel = <7>;
+		allwinner,drive = <1>;
+		allwinner,pull = <0>;
+	};
+
+	/* SP1-CS1 */
+	spi1_cs1_on: spi1_cs1_on@0
+	{
+		allwinner,pins = "PG8" ;
+		allwinner,function = "gpio_in";
+		allwinner,muxsel = <0>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
+	};
+	spi1_cs1_off: spi1_cs1_off@0
+	{
+		allwinner,pins = "PG8" ;
+		allwinner,function = "io_disabled";
+		allwinner,muxsel = <7>;
+		allwinner,drive = <1>;
+		allwinner,pull = <0>;
+	};
 };
 
 &r_pio{
 	pinctrl-0 = <&rpio_pinctrl_hog_hostboard>;
+
+	/* SP1-CS0 */
+	spi1_cs0_on: spi1_cs0_on@0
+	{
+		allwinner,pins = "PL7" ;
+		allwinner,function = "gpio_in";
+		allwinner,muxsel = <0>;
+		allwinner,drive = <1>;
+		allwinner,pull = <1>;
+	};
+	spi1_cs0_off: spi1_cs0_off@0
+	{
+		allwinner,pins = "PL7" ;
+		allwinner,function = "io_disabled";
+		allwinner,muxsel = <7>;
+		allwinner,drive = <1>;
+		allwinner,pull = <0>;
+	};
+
 };
 
 &pwm0
@@ -184,6 +238,25 @@
 	hdmi_skip_bootedid = <0x1>;
 	pinctrl-0 = <&hdmi_ddc_pin_a>;
 	ddc_en_io_ctrl = <0x0>;
+};
+
+&spi1{
+	#address-cells = <1>;
+	#size-cells = <0>;
+	compatible = "allwinner,sun50i-spi";
+	device_type = "spi1";
+	reg = <0x0 0x05011000 0x0 0x1000>;
+	interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+	clocks = <&clk_pll_periph0>, <&clk_spi1>;
+	clock-frequency = <100000000>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&spi1_pins_a>, <&spi1_cs0_on>, <&spi1_cs1_on> ;
+	pinctrl-1 = <&spi1_pins_c>, <&spi1_cs0_off>, <&spi1_cs1_off>;
+	spi1_cs_number = <1>;
+	spi1_cs_bitmap = <1>;
+	chipselect-gpios = <&r_pio PL 7 0 0 0 0xffffffff>, <&pio PG 8 0 0 0 0xffffffff>;
+	usegpiocs = <2>;
+	status = "disabled";
 };
 
 &uart0 {
