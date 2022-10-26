@@ -178,6 +178,23 @@ device_type = "lcd0";
 };
 
 &spi1{
-	status="okay";
+	// for GPIO testing 
+	status="disabled";
+};
+
+
+/*
+for GPIO testing
+*/
+&pwm {
+	status="disabled";
+};
+
+&pwm0 {
+	status="disabled";
+};
+
+&pwm1 {
+	status="disabled";
 };
 
