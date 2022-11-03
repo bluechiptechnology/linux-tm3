@@ -56,6 +56,7 @@ struct pcm512x_priv {
 	unsigned long overclock_pll;
 	unsigned long overclock_dac;
 	unsigned long overclock_dsp;
+	u8 lazy_startup;
 };
 
 /*
@@ -595,6 +596,10 @@ static int pcm512x_dai_startup(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_codec *codec = dai->codec;
 	struct pcm512x_priv *pcm512x = snd_soc_codec_get_drvdata(codec);
+
+	if (pcm512x->lazy_startup && 0 == pcm512x->fmt) {
+		return 0;
+	}
 
 	switch (pcm512x->fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBM_CFM:
@@ -1498,6 +1503,8 @@ int pcm512x_probe(struct device *dev, struct regmap *regmap)
 			ret = -EINVAL;
 			goto err_clk;
 		}
+
+		pcm512x->lazy_startup = of_property_read_bool(np, "lazy-startup");
 	}
 #endif
 
