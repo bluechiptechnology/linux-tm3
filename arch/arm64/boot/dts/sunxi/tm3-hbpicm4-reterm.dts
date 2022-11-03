@@ -30,6 +30,21 @@
 			regulator-max-microvolt = <1200000>;
 			regulator-always-on;
 		};
+
+		reg_hifiberry_3v3: reg_hifiberry_3v3 {
+			compatible = "regulator-fixed";
+			regulator-name = "reg-hifiberry-3v3";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			regulator-always-on;
+		};
+		reg_hifiberry_1v8: reg_hifiberry_1v8 {
+			compatible = "regulator-fixed";
+			regulator-name = "reg-hifiberry-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
 	};
 
 	dsi_refclk: dsi_refclk {
@@ -154,6 +169,26 @@ device_type = "lcd0";
 		status = "okay";
 	};
 
+	/* HiFiBerry DAC2 */
+	pcm5122@4d {
+		#sound-dai-cells = <0>;
+		compatible = "ti,pcm5122";
+		reg = <0x4d>;
+		//no clock is defined to force I2S slave mode
+		lazy-startup; //prevent errors when master calls startup() before setting the format
+		AVDD-supply = <&reg_hifiberry_3v3>;
+		DVDD-supply = <&reg_hifiberry_1v8>;
+		CPVDD-supply = <&reg_hifiberry_3v3>;
+		status = "okay";
+	};
+
+	/* HiFiBerry DAC2 Headphone amplifier */
+	tpa6130a2: tpa6130a2@60 {
+		compatible = "ti,tpa6130a2";
+		reg = <0x60>;
+		Vdd-supply = <&reg_hifiberry_3v3>;
+	};
+
 
 	lis331dlh: lis331dlh@19 {
 		compatible = "st,lis331dlh", "st,lis3lv02d";
@@ -175,6 +210,19 @@ device_type = "lcd0";
 		st,max-limit-z = <750>;
 		status = "okay";
 	};
+};
+
+&daudio2{
+	pcm_lrck_period =  <0x20>;
+	audio_format =  <0x01>;
+	status = "okay";
+};
+
+&snddaudio2 {
+	sunxi,snddaudio-codec = "pcm512x.0-004d";
+	sunxi,snddaudio-codec-dai = "pcm512x-hifi";
+	sunxi,snddaudio-aux-devs = <&tpa6130a2>;
+	status = "okay";
 };
 
 &spi1{
