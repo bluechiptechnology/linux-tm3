@@ -409,7 +409,6 @@ static ssize_t tc358768_dsi_host_transfer(struct mipi_dsi_host *host,
 {
 	struct tc358768_priv *priv = dsi_host_to_tc358768(host);
 	struct mipi_dsi_packet packet;
-	int i;
 	int ret;
 
 	if (!priv->enabled) {
@@ -426,9 +425,21 @@ static ssize_t tc358768_dsi_host_transfer(struct mipi_dsi_host *host,
 		return -ENOTSUPP;
 	}
 
-	i = 3; // re-send x times (the transfer is non reliable)
-	while (i--) {
+	//wait until the DCS TX is ready
+	{
+		u32 busy = 1;
+		u16 timeout = 50;
+		tc358768_read(priv, TC358768_DSICMD_TX, &busy);
+		while(busy) {
+			usleep_range(400, 700);
+			tc358768_read(priv, TC358768_DSICMD_TX, &busy);
+			timeout--;
+			if (0 == timeout)
+				return -ETIMEDOUT;
+		}
+	}
 
+	{
 		ret = mipi_dsi_create_packet(&packet, msg);
 		if (ret) {
 			dev_warn(priv->dev, "mipi_dsi_create_packet failed : %d\n", ret);
@@ -436,7 +447,6 @@ static ssize_t tc358768_dsi_host_transfer(struct mipi_dsi_host *host,
 		}
 
 		if (mipi_dsi_packet_format_is_short(msg->type)) {
-	//		dev_warn(priv->dev, "short command\n");
 			tc358768_write(priv, TC358768_DSICMD_TYPE,
 					   (0x10 << 8) | (packet.header[0] & 0x3f));
 			tc358768_write(priv, TC358768_DSICMD_WC, 0);
@@ -444,7 +454,6 @@ static ssize_t tc358768_dsi_host_transfer(struct mipi_dsi_host *host,
 					   (packet.header[2] << 8) | packet.header[1]);
 		} else {
 			int i;
-	//		dev_warn(priv->dev, "long command: len=%d\n", (int)packet.payload_length);
 			tc358768_write(priv, TC358768_DSICMD_TYPE,
 					   (0x40 << 8) | (packet.header[0] & 0x3f));
 			tc358768_write(priv, TC358768_DSICMD_WC, packet.payload_length);
@@ -466,8 +475,6 @@ static ssize_t tc358768_dsi_host_transfer(struct mipi_dsi_host *host,
 			dev_warn(priv->dev, "Software disable failed: %d\n", ret);
 		else
 			ret = packet.size;
-
-		msleep(1);
 	}
 
 	return ret;
