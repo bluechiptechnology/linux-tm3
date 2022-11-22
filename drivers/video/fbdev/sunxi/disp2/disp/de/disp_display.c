@@ -15,6 +15,7 @@
  */
 
 #include "disp_display.h"
+#include "disp_manager.h"
 
 struct disp_dev_t gdisp;
 
@@ -234,6 +235,19 @@ s32 disp_device_attached_and_enable(int disp_mgr, int disp_dev,
 			if (ret != 0)
 				goto exit;
 		}
+
+#if defined(CONFIG_SUNXI_IOMMU)
+		/* any first valid display device enables iommu */
+		{
+			static u8 iommu_enabled = 0;
+
+			if (iommu_enabled == 0) {
+				iommu_enabled = 1;
+				sunxi_enable_device_iommu(DE_MASTOR_ID, true);
+				DE_MSG("IOMMU ENABLED\n");
+			}
+		}
+#endif
 	}
 
 	return 0;
