@@ -89,8 +89,26 @@
 
 
 &disp{
+	//LCD
 	screen0_output_type = <0x1>;
 	screen0_output_format = <0x1>;
+
+	//HDMI
+	dev1_output_type = <0x4>;
+	dev1_output_mode = <0xa>;
+	dev1_screen_id = <0x1>;
+	dev1_do_hpd = <0x1>;
+
+	screen1_output_type = <0x3>;
+	screen1_output_mode = <0xa>; //1920x1080p60
+	screen1_output_format = <0xa>;
+	screen1_output_bits = <0x0>;
+	screen1_output_eotf = <0x4>;
+	screen1_output_cs = <0x104>;
+	screen1_output_dvi_hdmi = <0x2>;
+	screen1_output_range = <0x2>;
+	screen1_output_scan = <0x0>;
+	screen1_output_aspect_ratio = <0x8>;
 };
 
 /* 5.5 inch 1280x720*/
@@ -146,6 +164,18 @@ device_type = "lcd0";
 	bridge = <&rgb_dsi>;
 };
 
+&hdmi{
+	device_type = "hdmi";
+	status = "okay";
+	hdmi_hdcp_enable = <0x0>;
+	hdmi_hdcp22_enable = <0x0>;
+	hdmi_cts_compatibility = <0x0>;
+	hdmi_cec_support = <0x1>;
+	hdmi_cec_super_standby = <0x1>;
+	hdmi_skip_bootedid = <0x1>;
+	pinctrl-0 = <&hdmi_ddc_pin_a>;
+	ddc_en_io_ctrl = <0x0>;
+};
 
 &twi0 {
 	status = "okay";
