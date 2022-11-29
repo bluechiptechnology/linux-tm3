@@ -19,6 +19,7 @@ extern void LCD_CLOSE_FUNC(u32 sel, LCD_FUNC func, u32 delay /*ms */);
 struct __lcd_panel {
 	char name[32];
 	struct disp_lcd_panel_fun func;
+	int delays[8];
 };
 
 extern struct __lcd_panel *panel_array[];

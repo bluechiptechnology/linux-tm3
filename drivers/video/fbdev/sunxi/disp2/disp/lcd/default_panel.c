@@ -18,6 +18,25 @@ static void LCD_bl_close(u32 sel);
 static void LCD_panel_init(u32 sel);
 static void LCD_panel_exit(u32 sel);
 
+static void LCD_cfg_panel_info(struct panel_extend_para *info);
+static s32 LCD_open_flow(u32 sel);
+static s32 LCD_close_flow(u32 sel);
+static s32 LCD_user_defined_func(u32 sel, u32 para1, u32 para2, u32 para3);
+static void LCD_set_delays(int delays[8]);
+
+struct __lcd_panel default_panel = {
+	/* panel driver name, must mach the lcd_drv_name in sys_config.fex */
+	.name = "default_lcd",
+	.func = {
+		 .cfg_panel_info = LCD_cfg_panel_info,
+		 .cfg_open_flow = LCD_open_flow,
+		 .cfg_close_flow = LCD_close_flow,
+		 .lcd_user_defined_func = LCD_user_defined_func,
+		 .set_delays = LCD_set_delays,
+		 }
+	,
+};
+
 static void LCD_cfg_panel_info(struct panel_extend_para *info)
 {
 	u32 i = 0, j = 0;
@@ -83,13 +102,13 @@ static void LCD_cfg_panel_info(struct panel_extend_para *info)
 static s32 LCD_open_flow(u32 sel)
 {
 	/* open lcd power, and delay 50ms */
-	LCD_OPEN_FUNC(sel, LCD_power_on, 30);
+	LCD_OPEN_FUNC(sel, LCD_power_on, default_panel.delays[0] > 0 ? default_panel.delays[0] : 30);
 	/* open lcd power, than delay 200ms */
-	LCD_OPEN_FUNC(sel, LCD_panel_init, 50);
+	LCD_OPEN_FUNC(sel, LCD_panel_init, default_panel.delays[1] > 0 ? default_panel.delays[1] : 50);
 	/* open lcd controller, and delay 100ms */
-	LCD_OPEN_FUNC(sel, sunxi_lcd_tcon_enable, 100);
+	LCD_OPEN_FUNC(sel, sunxi_lcd_tcon_enable, default_panel.delays[2] > 0 ? default_panel.delays[2] : 100);
 	/* open lcd backlight, and delay 0ms */
-	LCD_OPEN_FUNC(sel, LCD_bl_open, 0);
+	LCD_OPEN_FUNC(sel, LCD_bl_open, default_panel.delays[3] > 0 ? default_panel.delays[3] : 0);
 
 	return 0;
 }
@@ -97,15 +116,28 @@ static s32 LCD_open_flow(u32 sel)
 static s32 LCD_close_flow(u32 sel)
 {
 	/* close lcd backlight, and delay 0ms */
-	LCD_CLOSE_FUNC(sel, LCD_bl_close, 0);
+	LCD_CLOSE_FUNC(sel, LCD_bl_close, default_panel.delays[4] > 0 ? default_panel.delays[4] : 0);
 	/* close lcd controller, and delay 0ms */
-	LCD_CLOSE_FUNC(sel, sunxi_lcd_tcon_disable, 0);
+	LCD_CLOSE_FUNC(sel, sunxi_lcd_tcon_disable, default_panel.delays[5] > 0 ? default_panel.delays[5] : 0);
 	/* open lcd power, than delay 200ms */
-	LCD_CLOSE_FUNC(sel, LCD_panel_exit, 200);
+	LCD_CLOSE_FUNC(sel, LCD_panel_exit, default_panel.delays[6] > 0 ? default_panel.delays[6] : 200);
 	/* close lcd power, and delay 500ms */
-	LCD_CLOSE_FUNC(sel, LCD_power_off, 500);
+	LCD_CLOSE_FUNC(sel, LCD_power_off, default_panel.delays[7] > 0 ? default_panel.delays[7] : 500);
 
 	return 0;
+}
+
+static void LCD_set_delays(int delays[8])
+{
+	int i;
+
+#if 0
+	printk("LCD: delays: %d, %d, %d, %d, %d, %d, %d, %d\n",
+		delays[0], delays[1], delays[2], delays[3], delays[4], delays[5], delays[6], delays[7]);
+#endif
+	for (i = 0; i < 8; i++) {
+		default_panel.delays[i] = delays[i];
+	}
 }
 
 static void LCD_power_on(u32 sel)
@@ -149,14 +181,4 @@ static s32 LCD_user_defined_func(u32 sel, u32 para1, u32 para2, u32 para3)
 	return 0;
 }
 
-struct __lcd_panel default_panel = {
-	/* panel driver name, must mach the lcd_drv_name in sys_config.fex */
-	.name = "default_lcd",
-	.func = {
-		 .cfg_panel_info = LCD_cfg_panel_info,
-		 .cfg_open_flow = LCD_open_flow,
-		 .cfg_close_flow = LCD_close_flow,
-		 .lcd_user_defined_func = LCD_user_defined_func,
-		 }
-	,
-};
+

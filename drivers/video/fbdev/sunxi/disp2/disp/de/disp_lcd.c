@@ -2313,6 +2313,21 @@ static s32 disp_lcd_set_panel_funs(struct disp_device *lcd, char *name,
 			DE_WRN("lcd_panel_fun[%d].cfg_panel_info is NULL\n", lcd->disp);
 		}
 
+		/* parse lcd flow / power sequencing delays */
+		if (lcd_cfg->set_delays) {
+			int delays[8] = {0};
+			struct device_node* lcd_root = disp_sys_script_get_root(primary_key);
+			of_property_read_s32(lcd_root, "lcd_delay_on_power", &delays[0]);
+			of_property_read_s32(lcd_root, "lcd_delay_on_panel", &delays[1]);
+			of_property_read_s32(lcd_root, "lcd_delay_on_tcon", &delays[2]);
+			of_property_read_s32(lcd_root, "lcd_delay_on_bl", &delays[3]);
+			of_property_read_s32(lcd_root, "lcd_delay_off_bl", &delays[4]);
+			of_property_read_s32(lcd_root, "lcd_delay_off_tcon", &delays[5]);
+			of_property_read_s32(lcd_root, "lcd_delay_off_panel", &delays[6]);
+			of_property_read_s32(lcd_root, "lcd_delay_off_power", &delays[7]);
+			lcd_cfg->set_delays(delays);
+		}
+
 		return 0;
 	}
 
