@@ -37,6 +37,29 @@ EXTRA_CFLAGS := -I$(SSV_DRV_PATH) -I$(SSV_DRV_PATH)/include
 
 #DEF_PARSER_H = $(SSV_DRV_PATH)/include/ssv_conf_parser.h
 #$(shell env ccflags="$(ccflags-y)" $(SSV_DRV_PATH)/parser-conf.sh $(DEF_PARSER_H))
+#-------------------------------
+#extra config
+ccflags-y += -D__CHECK_ENDIAN__
+ccflags-y += -DDEBUG
+ccflags-y += -DSSV_SUPPORT_SSV6020
+ccflags-y += -DCONFIG_SSV6200_CLI_ENABLE
+ccflags-y += -DCONFIG_SSV_BUILD_AS_ONE_KO
+ccflags-y += -DCONFIG_SSV_TX_LOWTHRESHOLD
+ccflags-y += -DCONFIG_SSV6200_HAS_RX_WORKQUEUE
+ccflags-y += -DUSE_THREAD_RX
+ccflags-y += -DUSE_THREAD_TX
+ccflags-y += -DENABLE_AGGREGATE_IN_TIME
+ccflags-y += -DENABLE_INCREMENTAL_AGGREGATION
+ccflags-y += -DUSE_GENERIC_DECI_TBL
+ccflags-y += -DSSV6200_ECO
+ccflags-y += -DHWIF_SDIO_RX_IRQ
+ccflags-y += -DCONFIG_STA_BCN_FILTER
+ccflags-y += -DCONFIG_SSV_USE_SDIO_DAT1_AS_INT
+ccflags-y += -DCONFIG_SDIO_FAVOR_RX
+ccflags-y += -DHWIF_IGNORE_SAFE_RW_REG
+ccflags-y += -DCONFIG_HW_SCAN
+ccflags-y += -DREPORT_TX_STATUS_DIRECTLY
+ccflags-y += -DCONFIG_SSV6XXX_DEBUGFS
 
 #------------------------------
 # ssvdevice/
