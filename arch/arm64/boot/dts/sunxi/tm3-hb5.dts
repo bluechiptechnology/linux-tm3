@@ -285,6 +285,16 @@ device_type = "lcd0";
 	pinctrl-1 = <&lcd0_pins_1>;
 	uboot_lcd_gpio_0 = <&r_pio PM 3 1 0 1 0>; //LCD Enable
 	uboot_lcd_gpio_1 = <&pio PD 22 1 0 1 0>; //LCD Backlight
+
+	//default power sequence
+	lcd_delay_on_power = <15>;
+	lcd_delay_on_panel = <15>;
+	lcd_delay_on_tcon = <100>;
+	lcd_delay_on_bl = <200>;
+	lcd_delay_off_bl = <200>;
+	lcd_delay_off_tcon = <10>;
+	lcd_delay_off_panel = <1>;
+	lcd_delay_off_power = <1>;
 };
 
 
