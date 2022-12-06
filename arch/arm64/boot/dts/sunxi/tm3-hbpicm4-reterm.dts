@@ -1,0 +1,293 @@
+/*
+ * Allwinner Technology CO., Ltd. sun50iw6p1 soc board.
+ *
+ * soc board support.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/input/input.h>
+
+#include "tm3-hbpicm4.dtsi"
+
+/ {
+	model = "BCT TM3-HBPICM4-RETERMINAL";
+
+	hbxregulators {
+		compatible = "simple-bus";
+
+		reg_lcd_3v3: lcd-3v3 {
+			compatible = "regulator-fixed";
+			regulator-name = "vcc-lcd-0";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			regulator-always-on;
+		};
+		reg_dsi_1v2: dsi-1v2 {
+			compatible = "regulator-fixed";
+			regulator-name = "vcc-dsi-0";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-always-on;
+		};
+
+		reg_hifiberry_3v3: reg_hifiberry_3v3 {
+			compatible = "regulator-fixed";
+			regulator-name = "reg-hifiberry-3v3";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			regulator-always-on;
+		};
+		reg_hifiberry_1v8: reg_hifiberry_1v8 {
+			compatible = "regulator-fixed";
+			regulator-name = "reg-hifiberry-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+		/* ADC supply */
+		adc_vcc3v27: adc_vcc3v27 {
+			compatible = "regulator-fixed";
+			regulator-name = "adc-vcc3v27";
+			regulator-min-microvolt = <3270000>;
+			regulator-max-microvolt = <3270000>;
+			regulator-always-on;
+		};
+	};
+
+	dsi_refclk: dsi_refclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		//clock-frequency =   <8000000>; // test 11MHz (76.6 kHz)
+		clock-frequency = <14318>; // onboard crystal (64.3kHz)
+		//clock-frequency =   <17755000>; //pixel clock 71MHz / 4
+	};
+};
+
+
+&pio {
+	//HSYNC, VSYNC
+	lcd0_pins_2: lcd0_p2{
+		allwinner,pins = "PD20", "PD21";
+		allwinner,function = "lcd0";
+		allwinner,pname = "lcdhsync", "lcdvsync";
+		allwinner,muxsel = <0x2>;
+		allwinner,pull = <0x0>;
+		allwinner,drive = <0x03>;
+		allwinner,data = <0xffffffff>;
+	};
+	lcd0_pins_3: lcd0_p3{
+		allwinner,pins = "PD20", "PD21";
+		allwinner,function = "lcd0";
+		allwinner,pname = "lcdhsync", "lcdvsync";
+		allwinner,muxsel = <0x7>;
+		allwinner,pull = <0x0>;
+		allwinner,drive = <0xffffffff>;
+		allwinner,data = <0xffffffff>;
+	};
+};
+
+
+&disp{
+	//LCD
+	screen0_output_type = <0x1>;
+	screen0_output_format = <0x1>;
+
+	//HDMI
+	dev1_output_type = <0x4>;
+	dev1_output_mode = <0xa>;
+	dev1_screen_id = <0x1>;
+	dev1_do_hpd = <0x1>;
+
+	screen1_output_type = <0x3>;
+	screen1_output_mode = <0xa>; //1920x1080p60
+	screen1_output_format = <0xa>;
+	screen1_output_bits = <0x0>;
+	screen1_output_eotf = <0x4>;
+	screen1_output_cs = <0x104>;
+	screen1_output_dvi_hdmi = <0x2>;
+	screen1_output_range = <0x2>;
+	screen1_output_scan = <0x0>;
+	screen1_output_aspect_ratio = <0x8>;
+};
+
+/* 5.5 inch 1280x720*/
+
+&lcd0{
+device_type = "lcd0";
+	lcd_used = <0x1>;
+	lcd_driver_name = "default_lcd";
+	lcd_backlight = <0>;
+	lcd_if = <0x0>;
+	lcd_hv_if = <0x00>;
+	lcd_pwm_used = <0>;
+	lcd_pwm_ch = <0>;
+	lcd_pwm_freq = <10000>;
+	lcd_pwm_pol = <0x1>;
+	lcd_pwm_max_limit = <255>;
+	lcd_lvds_if = <0x0>;
+	lcd_lvds_colordepth = <0x1>;
+	lcd_lvds_mode = <0x0>;
+	lcd_frm = <0x1>;
+	lcd_gamma_en = <0x0>;
+	lcd_bright_curve_en = <0x0>;
+	lcd_cmap_en = <0x0>;
+	lcd_bl_en;
+	lcd_bl_en_power = "none";
+	lcd_power = "vcc-lcd-0";
+	//lcd_bl_device = <&pwm_backlight>;
+	pinctrl-0 = <&lcd0_pins_0>, <&lcd0_pins_2>;
+	pinctrl-1 = <&lcd0_pins_1>, <&lcd0_pins_3>;
+	lcdd20 = <0xd6 0xc 0x3 0x1 0x0 0x1 0x1>;
+	//uboot_lcd_gpio_0 = <&r_pio PM 3 1 0 1 0>; //LCD Enable
+	//uboot_lcd_gpio_1 = <&pio PD 22 1 0 1 0>; //LCD Backlight
+
+	//geometry
+	lcd_x = <720>;
+	lcd_y = <1280>; // 1280
+	lcd_width = <110>;
+	lcd_height = <62>;
+
+
+	lcd_dclk_freq = <63>; // 1340 * 840 * 56 => 63.034 MHz
+	lcd_ht = <840>; // 840: 720 + 20 + 20 + 80
+	lcd_hbp = <40>; // 40: hbp also includes the sync pulse! so it is actually 50 -20 => 30
+	lcd_hspw = <20>; // 20
+	lcd_vt = <1340>; //1280 + 10 + 20 + 30
+	lcd_vbp = <50>; //hbp also includes the sync puse! so it is actually 50 -20 => 30
+	lcd_vspw = <20>;
+
+
+	lcd_hv_clk_phase = <0x1>;
+	lcd_hv_sync_polarity = <0x0>; //?
+
+	bridge = <&rgb_dsi>;
+};
+
+&hdmi{
+	device_type = "hdmi";
+	status = "okay";
+	hdmi_hdcp_enable = <0x0>;
+	hdmi_hdcp22_enable = <0x0>;
+	hdmi_cts_compatibility = <0x0>;
+	hdmi_cec_support = <0x1>;
+	hdmi_cec_super_standby = <0x1>;
+	hdmi_skip_bootedid = <0x1>;
+	pinctrl-0 = <&hdmi_ddc_pin_a>;
+	ddc_en_io_ctrl = <0x0>;
+};
+
+&twi0 {
+	status = "okay";
+	clock-frequency = <400000>;
+
+	rgb_dsi: rgb_dsi@e {
+		compatible = "toshiba,tc358778";
+		reg = <0xe>;
+		clocks = <&dsi_refclk>;
+		clock-names = "refclk";
+		vddc-supply = <&reg_dsi_1v2>;
+		vddmipi-supply = <&reg_dsi_1v2>;
+		vddio-supply = <&reg_lcd_3v3>;
+
+		dsi-lanes = <4>;
+		dsi-pixel-format = "RGB565";
+		rgb-mapping-mode = <0>;
+		vs-delay = <10>;
+
+		out-bridge = <&dsi_tft>;
+		status = "okay";
+	};
+
+	dsi_tft: dsi_tft@45 {
+		compatible = "bananapi,lhr050h41","ili9881c";
+		power = <&reg_lcd_3v3>;
+		reg = <0x45>;
+
+		status = "okay";
+	};
+
+	adc: max11613@34 {
+		compatible = "maxim,max11613";
+		reg = <0x34>;
+		vcc-supply = <&adc_vcc3v27>;
+		status = "okay";
+	};
+
+	/* HiFiBerry DAC2 */
+	pcm5122@4d {
+		#sound-dai-cells = <0>;
+		compatible = "ti,pcm5122";
+		reg = <0x4d>;
+		//no clock is defined to force I2S slave mode
+		lazy-startup; //prevent errors when master calls startup() before setting the format
+		AVDD-supply = <&reg_hifiberry_3v3>;
+		DVDD-supply = <&reg_hifiberry_1v8>;
+		CPVDD-supply = <&reg_hifiberry_3v3>;
+		status = "okay";
+	};
+
+	/* HiFiBerry DAC2 Headphone amplifier */
+	tpa6130a2: tpa6130a2@60 {
+		compatible = "ti,tpa6130a2";
+		reg = <0x60>;
+		Vdd-supply = <&reg_hifiberry_3v3>;
+	};
+
+
+	lis331dlh: lis331dlh@19 {
+		compatible = "st,lis331dlh", "st,lis3lv02d";
+		reg = <0x19>;
+		Vdd-supply = <&reg_lcd_3v3>;
+		Vdd_IO-supply = <&reg_lcd_3v3>;
+
+		st,wakeup-x-lo;
+		st,wakeup-x-hi;
+		st,wakeup-y-lo;
+		st,wakeup-y-hi;
+		st,wakeup-z-lo;
+		st,wakeup-z-hi;
+		st,min-limit-x = <120>;
+		st,min-limit-y = <120>;
+		st,min-limit-z = <140>;
+		st,max-limit-x = <550>;
+		st,max-limit-y = <550>;
+		st,max-limit-z = <750>;
+		status = "okay";
+	};
+};
+
+&daudio2{
+	pcm_lrck_period =  <0x20>;
+	audio_format =  <0x01>;
+	status = "okay";
+};
+
+&snddaudio2 {
+	sunxi,snddaudio-codec = "pcm512x.0-004d";
+	sunxi,snddaudio-codec-dai = "pcm512x-hifi";
+	sunxi,snddaudio-aux-devs = <&tpa6130a2>;
+	status = "okay";
+};
+
+&spi1{
+	// for GPIO testing 
+	status="disabled";
+};
+
+
+/*
+for GPIO testing
+*/
+&pwm {
+	status="disabled";
+};
+
+&pwm0 {
+	status="disabled";
+};
+
+&pwm1 {
+	status="disabled";
+};
+

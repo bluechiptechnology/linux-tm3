@@ -15,6 +15,7 @@
 #endif
 #include <linux/ion_sunxi.h>
 
+
 #ifdef CONFIG_PM
 #define CONFIG_PM_RUNTIME
 #endif
@@ -2097,9 +2098,6 @@ static s32 disp_init(struct platform_device *pdev)
 	int i, disp, num_screens;
 	unsigned int value, value1, value2, output_type, output_mode;
 	unsigned int output_format, output_bits, output_eotf, output_cs;
-#if defined(CONFIG_SUNXI_IOMMU)
-	char enable_iommu = 0;
-#endif	
 
 	__inf("%s !\n", __func__);
 
@@ -2197,10 +2195,6 @@ static s32 disp_init(struct platform_device *pdev)
 								output_cs;
 		g_disp_drv.disp_init.output_eotf[para->boot_info.disp] =
 								output_eotf;
-	} else {
-#if defined(CONFIG_SUNXI_IOMMU)
-		enable_iommu = 1;
-#endif
 	}
 
 	bsp_disp_init(para);
@@ -2223,13 +2217,6 @@ static s32 disp_init(struct platform_device *pdev)
 #endif
 	g_disp_drv.inited = true;
 	start_process();
-
-#if defined(CONFIG_SUNXI_IOMMU)
-	if (enable_iommu) {
-		msleep(10);
-		sunxi_enable_device_iommu(DE_MASTOR_ID, true);
-	}
-#endif
 
 	__inf("%s finish\n", __func__);
 	return 0;

@@ -188,6 +188,36 @@ static struct snd_soc_card snd_soc_sunxi_snddaudio = {
 #endif
 };
 
+
+static int sunxi_snddaudio_parse_aux_devs(struct device_node *node,
+					   struct snd_soc_card *snd_card)
+{
+	struct device_node *aux_node;
+	int i, n, len;
+
+	if (!of_find_property(node, "sunxi,snddaudio-aux-devs", &len))
+		return 0;		/* Ok to have no aux-devs */
+
+	n = len / sizeof(__be32);
+	if (n <= 0)
+		return -EINVAL;
+
+	snd_card->aux_dev = devm_kzalloc(snd_card->dev,
+			n * sizeof(*snd_card->aux_dev), GFP_KERNEL);
+	if (!snd_card->aux_dev)
+		return -ENOMEM;
+
+	for (i = 0; i < n; i++) {
+		aux_node = of_parse_phandle(node, "sunxi,snddaudio-aux-devs", i);
+		if (!aux_node)
+			return -EINVAL;
+		snd_card->aux_dev[i].codec_of_node = aux_node;
+	}
+
+	snd_card->num_aux_devs = n;
+	return 0;
+}
+
 #ifdef CONFIG_SND_SUNXI_SOC_AHUB
 static int sunxi_snddaudio_dev_probe(struct platform_device *pdev)
 {
@@ -258,6 +288,12 @@ static int sunxi_snddaudio_dev_probe(struct platform_device *pdev)
 	dev_info(card->dev, "codec: %s, codec_dai: %s.\n",
 			dai_link->codec_name,
 			dai_link->codec_dai_name);
+
+	ret = sunxi_snddaudio_parse_aux_devs(np, card);
+	if (ret) {
+		dev_err(card->dev, "aux_dev parse failed\n");
+		goto err_kfree_link;
+	}
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
@@ -360,6 +396,12 @@ cpu_node_find:
     sunxi_daudio_priv.mad_bind = 0;
 	snd_soc_card_set_drvdata(card, &sunxi_daudio_priv);
 #endif
+
+	ret = sunxi_snddaudio_parse_aux_devs(np, card);
+	if (ret) {
+		dev_err(card->dev, "aux_dev parse failed\n");
+		goto err_kfree_link;
+	}
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
