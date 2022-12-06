@@ -292,9 +292,10 @@
 	status = "disabled";
 };
 
-// Device type USB port
+// Host type USB port
 &usbc0{
-	usb_port_type = <0>;
+	usb_port_type = <1>;
+	usb_detect_type = <0>;
 };
 
 // daudio2 clashes with 50w-gpio
@@ -310,14 +311,14 @@
 	status = "disabled";
 };
 &s_cir0 {
-	status = "disabled";	
+	status = "disabled";
 };
 
 &s_uart0 {
-	status = "disabled";	
+	status = "disabled";
 };
 
 &rtc {
-	status = "disabled";	
+	status = "disabled";
 };
 
