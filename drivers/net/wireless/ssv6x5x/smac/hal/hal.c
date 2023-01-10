@@ -452,8 +452,10 @@ static int _ssv6xxx_load_firmware(struct ssv_hw *sh, u8 *firmware_name, u8 openf
         fw_fp = ssv6xxx_open_firmware(firmware_name);
         if (!fw_fp) {
             dbgprint(&sc->cmd_data, sc->log_ctrl, LOG_HAL, "failed to find firmware (%s)\n", firmware_name);
-            ret = -1;
-            goto out;
+            //ret = -1;
+            //goto out;
+            fw_fp = (void *)ssv6x5x_sw_bin;
+            openfile = 0;
         }
     }
     else

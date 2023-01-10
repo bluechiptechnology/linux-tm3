@@ -51,6 +51,8 @@
 	#define get_ds() KERNEL_DS
 #endif
 
+#define STA_CFG_PATH "/lib/firmware/ssv6x5x-wifi.cfg"
+
 MODULE_AUTHOR("iComm-semi, Ltd");
 MODULE_DESCRIPTION("Shared library for SSV wireless LAN cards.");
 MODULE_LICENSE("Dual BSD/GPL");
@@ -394,7 +396,7 @@ static void _set_initial_cfg_default(void)
 	}
 }
 
-static void _import_default_cfg (char *stacfgpath)
+static void _import_default_cfg (char *cfgpath)
 {
 	struct file *fp = (struct file *) NULL;
 	char cfg_cmd[32];
@@ -403,7 +405,10 @@ static void _import_default_cfg (char *stacfgpath)
     mm_segment_t fs;
 #endif
 	size_t s, read_len = 0, is_cmd_support = 0;
-	printk("\n*** %s, %s ***\n\n", __func__, stacfgpath);	
+	printk("\n*** %s, %s ***\n\n", __func__, cfgpath);	
+
+	if (NULL == cfgpath)
+		cfgpath = STA_CFG_PATH;
 
 	// Init the buffer with 0
 	memset(&ssv_cfg, 0, sizeof(ssv_cfg));
@@ -411,7 +416,7 @@ static void _import_default_cfg (char *stacfgpath)
     // set default config value
 	_set_initial_cfg_default();
 	 
-	if (stacfgpath == NULL)
+	if (cfgpath == NULL)
 	{
 	    WARN_ON(1);
 	    return;
@@ -431,7 +436,7 @@ static void _import_default_cfg (char *stacfgpath)
 
 	 
 	memset(buf, 0, MAX_CHARS_PER_LINE);
-	fp = filp_open(stacfgpath, O_RDONLY, 0);
+	fp = filp_open(cfgpath, O_RDONLY, 0);
 	
 	if (IS_ERR(fp) || fp == NULL) {
 		printk("ERROR: filp_open\n");
