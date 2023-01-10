@@ -61,6 +61,11 @@ ccflags-y += -DCONFIG_HW_SCAN
 ccflags-y += -DREPORT_TX_STATUS_DIRECTLY
 ccflags-y += -DCONFIG_SSV6XXX_DEBUGFS
 
+ccflags-y += -DCONFIG_SDIO_FAVOR_RX
+ccflags-y += -DCONFIG_MMC_DISALLOW_STACK
+ccflags-y += -DSSV6X5X_PM_MOD
+ccflags-y += -DCONFIG_BLE
+ccflags-y += -DCONFIG_BLE_HCI_BUS=1
 #------------------------------
 # ssvdevice/
 KERN_SRCS := ssvdevice/ssvdevice.c
