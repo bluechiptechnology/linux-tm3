@@ -1,0 +1,22 @@
+
+#include "tm3-hb8.dts"
+
+&lcd0 {
+	lcd_x = <1024>;
+	lcd_y = <768>;
+	lcd_width = <196>;
+	lcd_height = <148>;
+	lcd_dclk_freq = <100>;
+	lcd_hbp = <260>;
+	lcd_ht = <2024>;
+	lcd_hspw = <260>;
+	lcd_vbp = <6>;
+	lcd_vt = <800>;
+	lcd_vspw = <10>;
+	lcd_hv_clk_phase = <0x2>;
+	lcd_hv_sync_polarity = <0x1>;
+};
+
+&pcap2 {
+	status = "okay";
+};
