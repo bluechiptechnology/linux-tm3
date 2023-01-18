@@ -154,6 +154,11 @@ void __ew32(struct e1000_hw *hw, unsigned long reg, u32 val)
 	writel(val, hw->hw_addr + reg);
 }
 
+u32 __er32(struct e1000_hw* hw, unsigned long reg)
+{
+	return readl(hw->hw_addr + reg);
+}
+
 /**
  * e1000_regdump - register printout routine
  * @hw: pointer to the HW structure
@@ -7083,11 +7088,13 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		}
 	}
 
+	/*
 	bars = pci_select_bars(pdev, IORESOURCE_MEM);
 	err = pci_request_selected_regions_exclusive(pdev, bars,
 						     e1000e_driver_name);
 	if (err)
 		goto err_pci_reg;
+		*/
 
 	/* AER (Advanced Error Reporting) hooks */
 	pci_enable_pcie_error_reporting(pdev);
@@ -7125,6 +7132,9 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	mmio_len = pci_resource_len(pdev, 0);
 
 	err = -EIO;
+
+	printk("e1000_probe: %x %X\r\n", mmio_start, mmio_len);
+
 	adapter->hw.hw_addr = ioremap(mmio_start, mmio_len);
 	if (!adapter->hw.hw_addr)
 		goto err_ioremap;

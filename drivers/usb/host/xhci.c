@@ -390,8 +390,10 @@ static int xhci_try_enable_msi(struct usb_hcd *hcd)
 		free_irq(hcd->irq, hcd);
 	hcd->irq = 0;
 
+	/* Disable msix as host does not support it at present
 	ret = xhci_setup_msix(xhci);
 	if (ret)
+	*/
 		/* fall back to msi*/
 		ret = xhci_setup_msi(xhci);
 
