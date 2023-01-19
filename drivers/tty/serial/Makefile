@@ -95,5 +95,8 @@ obj-$(CONFIG_SERIAL_PIC32)	+= pic32_uart.o
 obj-$(CONFIG_SERIAL_MPS2_UART)	+= mps2-uart.o
 obj-$(CONFIG_SERIAL_SUNXI)	+= sunxi-uart.o
 obj-$(CONFIG_SERIAL_EXAR_XRM117X)	+= xrm117x.o
+obj-$(CONFIG_SERIAL_ASIX_MCS99XX)	+= 99xx.o
+
+
 # GPIOLIB helpers for modem control lines
 obj-$(CONFIG_SERIAL_MCTRL_GPIO)	+= serial_mctrl_gpio.o

@@ -1665,7 +1665,6 @@ config SERIAL_MVEBU_CONSOLE
 
 config SERIAL_SUNXI
 	tristate "SUNXI UART Controller"
-	depends on SERIAL_8250=n
 	depends on OF
 	select SERIAL_CORE
 	default y
@@ -1706,6 +1705,13 @@ config SERIAL_EXAR_XRM117X
 	select GPIOLIB_IRQCHIP
 	help
 	  XRM117X chip support
+
+config SERIAL_ASIX_MCS99XX	
+	bool "Support for ASIX MCS 99XX Series of PCIe UART controllers"
+	select SERIAL_CORE
+	select SERIAL_CORE_CONSOLE
+	help
+	  MCS 99XX chip support
 
 endmenu
 

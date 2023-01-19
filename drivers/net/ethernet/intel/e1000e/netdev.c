@@ -7059,7 +7059,8 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	resource_size_t flash_start, flash_len;
 	static int cards_found;
 	u16 aspm_disable_flag = 0;
-	int bars, i, err, pci_using_dac;
+	int i, err, pci_using_dac;
+	//int bars;
 	u16 eeprom_data = 0;
 	u16 eeprom_apme_mask = E1000_EEPROM_APME;
 	s32 ret_val = 0;
@@ -7132,8 +7133,6 @@ static int e1000_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	mmio_len = pci_resource_len(pdev, 0);
 
 	err = -EIO;
-
-	printk("e1000_probe: %x %X\r\n", mmio_start, mmio_len);
 
 	adapter->hw.hw_addr = ioremap(mmio_start, mmio_len);
 	if (!adapter->hw.hw_addr)
@@ -7387,7 +7386,7 @@ err_ioremap:
 	free_netdev(netdev);
 err_alloc_etherdev:
 	pci_release_mem_regions(pdev);
-err_pci_reg:
+//err_pci_reg:
 err_dma:
 	pci_disable_device(pdev);
 	return err;

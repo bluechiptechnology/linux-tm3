@@ -764,11 +764,11 @@ static void sunxi_pcie_prog_outbound_atu(struct pcie_port *pp, int index,
 static int sunxi_pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 			u32 devfn, int where, int size, u32 *val)
 {
-	int ret, type, i;
+	int ret, type;
 	u32 busdev, cfg_size;
 	u64 cpu_addr;
 	void __iomem *va_cfg_base;
-	int pcie_page, mem_base;
+	int pcie_page;
 	unsigned long flags = 0;
 
 	busdev = PCIE_ATU_BUS(bus->number) | PCIE_ATU_DEV(PCI_SLOT(devfn)) |
@@ -822,12 +822,14 @@ static int sunxi_pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 static int sunxi_pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 			unsigned int devfn, int where, int size, u32 val)
 {
-	int ret, type, i;
+	int ret, type;
 	u32 busdev, cfg_size;
 	u64 cpu_addr;
 	void __iomem *va_cfg_base;
-	int pcie_page, mem_base;
+	int pcie_page;
 	unsigned long flags = 0;
+
+	//int mem_base, i;
 
 	busdev = PCIE_ATU_BUS(bus->number) | PCIE_ATU_DEV(PCI_SLOT(devfn)) |
 		 PCIE_ATU_FUNC(PCI_FUNC(devfn));
