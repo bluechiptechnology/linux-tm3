@@ -286,6 +286,7 @@ device_type = "lcd0";
 	pinctrl-1 = <&lcd0_pins_1>;
 	uboot_lcd_gpio_0 = <&r_pio PM 3 1 0 1 0>; //LCD Enable
 	uboot_lcd_gpio_1 = <&pio PD 22 1 0 1 0>; //LCD Backlight
+	uboot_no_logo; // do not use bootlogo nor LCD during u-boot boot
 
 	//default power sequence
 	lcd_delay_on_power = <15>;
