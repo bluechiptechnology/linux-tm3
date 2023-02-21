@@ -37,6 +37,7 @@
 			regulator-name = "vcc-lcd-0";
 			gpio = <&r_pio PM 3 1 0 1 0>;
 			enable-active-high;
+			regulator-boot-on;
 		};
 	};	
 
