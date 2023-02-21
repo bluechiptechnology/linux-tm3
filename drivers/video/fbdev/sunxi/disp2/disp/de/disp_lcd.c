@@ -9,6 +9,7 @@
  */
 
 #include <linux/backlight.h>
+#include <linux/hrtimer.h>
 #include <drm/drm_modes.h>
 #include "disp_lcd.h"
 
@@ -62,6 +63,8 @@ struct disp_lcd_private_data {
 	struct work_struct reflush_work;
 	struct disp_lcd_esd_info esd_inf;
 	struct i2c_client* bridge;
+	bool initial_bl; /* backlight initialised */
+	struct hrtimer hrtimer_bl;
 };
 static spinlock_t lcd_data_lock;
 
@@ -1100,6 +1103,20 @@ static s32 disp_lcd_pwm_disable(struct disp_device *lcd)
 }
 #endif
 
+static enum hrtimer_restart disp_lcd_bl_timer (struct hrtimer *hrt)
+{
+	struct disp_lcd_private_data* lcdp = container_of(hrt, struct disp_lcd_private_data, hrtimer_bl);
+
+	if (NULL == lcdp) {
+		DE_WRN("disp: error timer lcdp NULL\n");
+	} else {
+		lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_UNBLANK;
+		lcdp->lcd_cfg.lcd_bl_device->props.state  &= ~BL_CORE_FBBLANK;
+		backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
+	}
+	return HRTIMER_NORESTART;
+}
+
 static s32 disp_lcd_backlight_enable(struct disp_device *lcd)
 {
 	struct disp_gpio_set_t gpio_info[1];
@@ -1145,11 +1162,22 @@ static s32 disp_lcd_backlight_enable(struct disp_device *lcd)
 		/* enable backlight */
 		if (lcdp->lcd_cfg.lcd_bl_device) {
 			DEBUG(("LCD: enabling backlight\n"));
+
+			/* normal enablement of backlight */
+			if (lcdp->initial_bl) {
+				msleep(20);
+				lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_UNBLANK;
+				lcdp->lcd_cfg.lcd_bl_device->props.state  &= ~BL_CORE_FBBLANK;
+				backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
+			}
 			/* Delay before backlight is on to prevent garbage being seen on the screen */
-			msleep(20);
-			lcdp->lcd_cfg.lcd_bl_device->props.power = FB_BLANK_UNBLANK;
-			lcdp->lcd_cfg.lcd_bl_device->props.state  &= ~BL_CORE_FBBLANK;
-			backlight_update_status(lcdp->lcd_cfg.lcd_bl_device);
+			else {
+				/* start a timer that will enable backlight after a time period */
+				lcdp->initial_bl = true;
+				hrtimer_init(&lcdp->hrtimer_bl, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+				lcdp->hrtimer_bl.function = disp_lcd_bl_timer;
+				hrtimer_start(&lcdp->hrtimer_bl, ms_to_ktime(1500), HRTIMER_MODE_REL);
+			}
 		}
 
 
