@@ -4,6 +4,10 @@
  * soc board support.
  */
 
+/* u-boot fb with boot logo */
+/memreserve/ 0x7f000000 0x00800000; // framebuffer, size = 8M
+
+
 #include "sun50iw6p1.dtsi"
 
 / {
