@@ -15,8 +15,12 @@
 	lcd_vspw = <10>;
 	lcd_hv_clk_phase = <0x2>;
 	lcd_hv_sync_polarity = <0x1>;
+
+	lcd_delay_on_tcon = <150>;
 };
 
 &pcap2 {
 	status = "okay";
 };
+
+
