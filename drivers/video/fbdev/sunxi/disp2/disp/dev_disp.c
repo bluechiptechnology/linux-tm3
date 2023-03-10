@@ -2927,6 +2927,7 @@ int disp_resume(struct device *dev)
 	int num_screens = bsp_disp_feat_get_num_screens();
 	struct disp_manager *mgr = NULL;
 	struct disp_device_config config;
+	bool cb_resume = true;
 
 #if defined(SUPPORT_EINK) && defined(CONFIG_EINK_PANEL_USED)
 	struct disp_eink_manager *eink_manager = NULL;
@@ -2935,8 +2936,13 @@ int disp_resume(struct device *dev)
 	struct disp_device *dispdev = NULL;
 	struct list_head *disp_list = NULL;
 
-	if (dev->power.runtime_status == RPM_ACTIVE)
+#ifdef CONFIG_ANDROID
+	// android calls disp_runtime_resume after disp_resume
+	cb_resume = false;
+	if (dev->power.runtime_status == RPM_ACTIVE) {
 		goto late_resume;
+	}
+#endif
 
 	disp_list = disp_device_get_list_head();
 	list_for_each_entry(dispdev, disp_list, list) {
@@ -3001,8 +3007,11 @@ int disp_resume(struct device *dev)
 					mgr->device->enable(mgr->device);
 			}
 		}
-		disp_resume_cb();
+		if (!cb_resume)
+			disp_resume_cb();
 	}
+	if (cb_resume)
+		disp_resume_cb();
 #else
 	struct disp_device *dispdev = NULL;
 	struct list_head *disp_list = NULL;
