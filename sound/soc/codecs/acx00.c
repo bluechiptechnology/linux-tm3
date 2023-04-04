@@ -50,6 +50,7 @@ struct acx00_priv {
 	unsigned int enable;
 	unsigned int spk_gpio;
 	bool spk_gpio_used;
+	int spk_gpio_state; /* state before suspend */
 	struct mutex mutex;
 	struct delayed_work spk_work;
 	struct delayed_work resume_work;
@@ -191,11 +192,12 @@ static unsigned int spk_delay = 100;
 module_param(spk_delay, int, 0644);
 MODULE_PARM_DESC(spk_delay, "ACX00-Codec spk mute delay time");
 
+/* delayed task: setting the speaker state on/off */
 static void acx00_spk_enable(struct work_struct *work)
 {
 	struct acx00_priv *priv = container_of(work,
 			struct acx00_priv, spk_work.work);
-	gpio_set_value(priv->spk_gpio, 1);
+	gpio_set_value(priv->spk_gpio, priv->spk_gpio_state);
 }
 
 static int acx00_lineout_event(struct snd_soc_dapm_widget *w,
@@ -205,6 +207,7 @@ static int acx00_lineout_event(struct snd_soc_dapm_widget *w,
 	struct acx00_priv *priv = snd_soc_codec_get_drvdata(codec);
 
 	switch (event) {
+	/* PM event - resume */
 	case	SND_SOC_DAPM_POST_PMU:
 		if (!priv->enable) {
 			snd_soc_update_bits(priv->codec, AC_LINEOUT_CTL,
@@ -221,7 +224,7 @@ static int acx00_lineout_event(struct snd_soc_dapm_widget *w,
 #endif
 		if (priv->spk_gpio_used) {
 			if (spk_delay == 0) {
-				gpio_set_value(priv->spk_gpio, 1);
+				gpio_set_value(priv->spk_gpio, priv->spk_gpio_state);
 				/*
 				* time delay to wait spk pa work fine,
 				* general setting 50ms
@@ -232,9 +235,12 @@ static int acx00_lineout_event(struct snd_soc_dapm_widget *w,
 					msecs_to_jiffies(spk_delay));
 		}
 		break;
+	/* PM event - suspend */
 	case	SND_SOC_DAPM_PRE_PMD:
 		mdelay(50);
 		if (priv->spk_gpio_used) {
+			/* store current speaker switch state before suspend */
+			priv->spk_gpio_state = gpio_get_value(priv->spk_gpio);
 			gpio_set_value(priv->spk_gpio, 0);
 			msleep(50);
 		}
@@ -1234,9 +1240,10 @@ static int acx00_codec_dev_probe(struct platform_device *pdev)
 					ret = -EBUSY;
 					goto err_devm_kfree;
 				} else {
-					gpio_direction_output(priv->spk_gpio,
-								1);
+					gpio_direction_output(priv->spk_gpio, 1);
 					gpio_set_value(priv->spk_gpio, 0);
+					/* Export speaker gpio, so userspace can turn it on/off */
+					gpio_export(priv->spk_gpio, false);
 				}
 			}
 		} else {
