@@ -292,14 +292,17 @@
 		drm_region_start_mbytes = <0x0>;
 	};
 
+	//read by u-boot -> sets the regulator voltages
 	power_sply {
 		device_type = "power_sply";
-		dcdca_vol = <0xf4628>;
-		aldo2_vol = <0xf4f24>;
-		cldo2_vol = <0xce4>;
-		cldo3_vol = <0xce4>;
-		bldo3_vol = <0x3F2>;
-		bldo4_vol = <0xf4948>;
+		dcdca_vol = <1001000>; //1.0V (On)
+		aldo1_vol = <1003300>; //3.3V (On)   USB
+		aldo2_vol =    <3300>; //3.3V (Off)  WiFi
+		bldo1_vol = <1001800>; //1.8V (On)
+		bldo2_vol = <1001800>; //1.8V (On)
+		bldo3_vol =    <1010>; //1.01V (Off)
+		cldo2_vol =    <3300>; //3.3V (Off)
+		cldo3_vol =    <3300>; //3.3V (Off)
 	};
 
 	//gpio_bias {
@@ -615,10 +618,10 @@
 	regulator1 = "axp806_dcdca none vdd-cpua";
 	regulator2 = "axp806_dcdcb none";
 	regulator3 = "axp806_dcdcc none vdd-gpu";
-	regulator4 = "axp806_dcdcd none vdd-sys vdd-hdmi vdd-pcie vdd-usb";
+	regulator4 = "axp806_dcdcd none vdd-sys vdd-hdmi vdd-pcie";
 	regulator5 = "axp806_dcdce none vcc-dram";
-	regulator6 = "axp806_aldo1 none";
-	regulator7 = "axp806_aldo2 none";
+	regulator6 = "axp806_aldo1 none vdd-usb";
+	regulator7 = "axp806_aldo2 none vdd-wifi";
 	regulator8 = "axp806_aldo3 none";
 	regulator9 = "axp806_bldo1 none vcc-pc vcc-emmc-18 vdd-efuse vcc-pcie vcc-hdmi vcc-pl";
 	regulator10 = "axp806_bldo2 none vdd-dram-18 vdd-bias vcc-pll";
