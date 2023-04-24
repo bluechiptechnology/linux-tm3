@@ -53,10 +53,10 @@ struct axp80x_regulators {
 
 #define AXP80X_LDO(_id, min, max, step1, vreg, shift, nbits,\
 		ereg, emask, enval, disval, switch_vol, step2, new_level,\
-		mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag) \
-	AXP_LDO(AXP80X, _id, min, max, step1, vreg, shift, nbits,\
+		mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag, sname) \
+	AXP_LDOSN(AXP80X, _id, min, max, step1, vreg, shift, nbits,\
 		ereg, emask, enval, disval, switch_vol, step2, new_level,\
-		mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag)
+		mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag, sname)
 
 #define AXP80X_DCDC(_id, min, max, step1, vreg, shift, nbits,\
 		ereg, emask, enval, disval, switch_vol, step2, new_level,\
@@ -77,27 +77,27 @@ static struct axp_regulator_info axp80x_regulator_info[] = {
 	AXP80X_DCDC(E,      1100, 3400, 100,  DCDCE, 0, 5,  DCDCEEN, 0x10,
 		0x10,    0,     0,   0, 0, 0x1B, 0x10, 0x1C, 0, 0, 0),
 	AXP80X_LDO(1,        700, 3300, 100,  ALDO1, 0, 5,  ALDO1EN, 0x20,
-		0x20,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x20,    0,      0, 0, 0,     0,    0,    0, 0, 0, "aldo1"),
 	AXP80X_LDO(2,        700, 3400, 100,  ALDO2, 0, 5,  ALDO2EN, 0x40,
-		0x40,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x40,    0,      0, 0, 0,     0,    0,    0, 0, 0, "aldo2"),
 	AXP80X_LDO(3,        700, 3300, 100,  ALDO3, 0, 5,  ALDO3EN, 0x80,
-		0x80,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x80,    0,      0, 0, 0,     0,    0,    0, 0, 0, "aldo3"),
 	AXP80X_LDO(4,        700, 1900, 100,  BLDO1, 0, 4,  BLDO1EN, 0x01,
-		0x01,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x01,    0,      0, 0, 0,     0,    0,    0, 0, 0, "bldo1"),
 	AXP80X_LDO(5,        700, 1900, 100,  BLDO2, 0, 4,  BLDO2EN, 0x02,
-		0x02,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x02,    0,      0, 0, 0,     0,    0,    0, 0, 0, "bldo2"),
 	AXP80X_LDO(6,        700, 1900, 100,  BLDO3, 0, 4,  BLDO3EN, 0x04,
-		0x04,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x04,    0,      0, 0, 0,     0,    0,    0, 0, 0, "bldo3"),
 	AXP80X_LDO(7,        700, 1900, 100,  BLDO4, 0, 4,  BLDO4EN, 0x08,
-		0x08,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x08,    0,      0, 0, 0,     0,    0,    0, 0, 0, "bldo4"),
 	AXP80X_LDO(8,        700, 3300, 100,  CLDO1, 0, 5,  CLDO1EN, 0x10,
-		0x10,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x10,    0,      0, 0, 0,     0,    0,    0, 0, 0, "cldo1"),
 	AXP80X_LDO(9,        700, 4200, 100,  CLDO2, 0, 5,  CLDO2EN, 0x20,
-		0x20,    0, 3400, 200, 0,     0,    0,    0, 0, 0),
+		0x20,    0, 3400, 200, 0,     0,    0,    0, 0, 0, "cldo2"),
 	AXP80X_LDO(10,       700, 3300, 100,  CLDO3, 0, 5,  CLDO3EN, 0x40,
-		0x40,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x40,    0,      0, 0, 0,     0,    0,    0, 0, 0, "cldo3"),
 	AXP80X_LDO(11,      3300, 3300,   0,     SW, 0, 0,     SWEN, 0x80,
-		0x80,    0,      0, 0, 0,     0,    0,    0, 0, 0),
+		0x80,    0,      0, 0, 0,     0,    0,    0, 0, 0, "swen"),
 };
 
 static struct regulator_init_data axp80x_regulator_init_data[] = {

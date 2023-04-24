@@ -38,12 +38,13 @@ struct axp_consumer_supply {
 #define AXP_LDOIO_ID_START      30
 #define AXP_DCDC_ID_START       40
 
-#define AXP_LDO(_pmic, _id, min, max, step1, vreg, shift, nbits, ereg,\
+#define AXP_LDOSN(_pmic, _id, min, max, step1, vreg, shift, nbits, ereg,\
 	emask, enval, disval, switch_vol, step2, new_level,\
-	mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag)\
+	mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag, sname)\
 {                                                      \
 	.desc   = {                                        \
 		.name   = #_pmic"_LDO" #_id,                   \
+		.supply_name = sname,                          \
 		.type   = REGULATOR_VOLTAGE,                   \
 		.id = _pmic##_ID_LDO##_id,                     \
 		.n_voltages = (step1) ? ((switch_vol) ?        \
@@ -73,6 +74,14 @@ struct axp_consumer_supply {
 	.dvm_enable_bit = dvm_ebit,                        \
 	.dvm_finish_flag = dvm_flag,                       \
 }
+
+#define AXP_LDO(_pmic, _id, min, max, step1, vreg, shift, nbits, ereg,\
+	emask, enval, disval, switch_vol, step2, new_level,\
+	mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag)\
+	AXP_LDOSN(_pmic, _id, min, max, step1, vreg, shift, nbits, ereg,\
+	emask, enval, disval, switch_vol, step2, new_level,\
+	mode_addr, freq_addr, dvm_ereg, dvm_ebit, dvm_flag, "")
+
 
 #define AXP_DCDC(_pmic, _id, min, max, step1, vreg, shift, nbits, ereg,\
 	emask, enval, disval, switch_vol, step2, new_level,\
