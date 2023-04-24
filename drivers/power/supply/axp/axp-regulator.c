@@ -542,9 +542,11 @@ struct regulator_dev *axp_regulator_register(struct device *dev,
 
 	if (init_data->num_consumer_supplies <= 1)
 	{
-		printk("%s: has no consumer supplies. Disable it\r\n", info->desc.name, info->desc.supply_name);
+		printk("%s: (%s) has no consumer supplies. Disable it\r\n", info->desc.name, info->desc.supply_name);
 		//regulator_enable(rdev->supply);
 		axp_disable(rdev);
+	} else {
+		axp_enable(rdev);
 	}
 	
 	return rdev;
