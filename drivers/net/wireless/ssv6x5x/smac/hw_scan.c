@@ -62,11 +62,12 @@ void ssv6xxx_scan_complete(struct ssv_softc *sc, bool abort)
 #endif
     
     sc->hw_scan_done = true;
-    
+#ifdef VERBOSE_LOG
     if (abort)
         printk("HW scan aborted\n");
     else
         printk("HW scan complete\n");
+#endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
     ieee80211_scan_completed(sc->hw, &info);
@@ -333,8 +334,9 @@ int ssv6200_hw_scan(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
     int i = 0;
 
     mutex_lock(&sc->mutex);
+#ifdef VERBOSE_LOG
     printk("scan on vif: %pM\n", vif->addr);
-
+#endif
     if (sc->bScanning == true) {
         printk("scan is running, ignore the scan request\n");
         goto out;
@@ -413,8 +415,9 @@ void ssv6xxx_cancel_hw_scan(struct ssv_softc *sc)
 void ssv6200_cancel_hw_scan(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 {
     struct ssv_softc *sc = hw->priv;
-    
+#ifdef VERBOSE_LOG
     printk("cancel HW scan on vif: %pM\n", vif->addr);
+#endif
     mutex_lock(&sc->mutex);
     ssv6xxx_cancel_hw_scan(sc);
     mutex_unlock(&sc->mutex);

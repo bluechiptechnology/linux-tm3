@@ -69,7 +69,10 @@ static bool ssv6006_use_hw_encrypt(int cipher, struct ssv_softc *sc,
 
 static bool ssv6006_if_chk_mac2(struct ssv_hw *sh)
 {
+#ifdef VERBOSE_LOG
     printk(" %s: is not need to check MAC addres 2 for this model \n",__func__); 
+#endif
+
     return false;
 }
 

@@ -683,10 +683,10 @@ int ssv6xxx_init_hal(struct ssv_softc *sc)
     if (   strstr(priv->chip_id, SSV6006)
         	 || strstr(priv->chip_id, SSV6006C)
         	 || strstr(priv->chip_id, SSV6006D)) {
-
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"%s\n", sc->platform_dev->id_entry->name);
         printk(KERN_INFO"Attach SSV6006 family HAL function  \n");
-
+#endif
         ssv_attach_ssv6006(sc, hal_ops);
         chip_supportted = true;
     }
@@ -694,8 +694,10 @@ int ssv6xxx_init_hal(struct ssv_softc *sc)
 #ifdef SSV_SUPPORT_SSV6020
     if (strstr(priv->chip_id, SSV6020B)
         || strstr(priv->chip_id, SSV6020C)) {
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"%s\n", sc->platform_dev->id_entry->name);
         printk(KERN_INFO"Attach SSV6020 family HAL function  \n");
+#endif
         ssv_attach_ssv6020(sc, hal_ops);
         chip_supportted = true;
     }

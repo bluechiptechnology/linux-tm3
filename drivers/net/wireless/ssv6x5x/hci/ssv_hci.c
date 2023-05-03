@@ -974,7 +974,9 @@ static int ssv6xxx_hci_tx_task (void *data)
     struct ssv_sw_txq *sw_txq;
     int max_count = 0;
 #endif
+#ifdef VERBOSE_LOG
     printk(KERN_ERR "SSV6XXX HCI TX Task started.\n");
+#endif
 
     while (!kthread_should_stop())
     {

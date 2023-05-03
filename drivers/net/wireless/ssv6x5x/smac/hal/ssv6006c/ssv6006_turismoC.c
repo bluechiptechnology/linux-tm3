@@ -126,7 +126,9 @@ static int ssv6006_turismoC_set_channel(struct ssv_softc *sc, struct ieee80211_c
         if (chan->hw_value > 14)
             ptr->scan_param.no_cck = true;
     }
+#ifdef VERBOSE_LOG
     printk("chan change ch %d, type %d, off_chan %d\n", ptr->chan, ptr->chan_type, ptr->off_chan);
+#endif
     ret = HCI_SEND_CMD(sc->sh, skb);
 
     // update tx power

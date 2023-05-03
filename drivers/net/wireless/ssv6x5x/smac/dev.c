@@ -400,12 +400,12 @@ int _set_key_wep (struct ssv_softc *sc, struct ssv_vif_priv_data *vif_priv,
 {
     int                            ret = 0;
     struct ssv_vif_info           *vif_info = &sc->vif_info[vif_priv->vif_idx];
-
+#ifdef VERBOSE_LOG
     printk(KERN_ERR "Set WEP %02X %02X %02X %02X %02X %02X %02X %02X... (%d %d)\n",
             key->key[0], key->key[1], key->key[2], key->key[3],
             key->key[4], key->key[5], key->key[6], key->key[7],
             key->keyidx, key->keylen);    
-
+#endif
     if ( SSV_WEP_USE_HW_CIPHER(sc, vif_priv))
     {
         vif_priv->has_hw_decrypt = true;
@@ -458,7 +458,9 @@ static int _set_pairwise_key_tkip_ccmp (struct ssv_softc *sc, struct ssv_vif_pri
         struct ieee80211_key_conf *key)
 {
     int ret = 0;
+#ifdef VERBOSE_LOG
     const char *cipher_name = (cipher == SECURITY_CCMP) ? "CCMP" : "TKIP";
+#endif
 
     if (sta_priv == NULL) {
         dev_err(sc->dev, "Setting pairwise TKIP/CCMP key to NULL STA.\n");
@@ -474,7 +476,9 @@ static int _set_pairwise_key_tkip_ccmp (struct ssv_softc *sc, struct ssv_vif_pri
 
         if (SSV_USE_HW_ENCRYPT(cipher, sc, sta_priv, vif_priv))
         {
+#ifdef VERBOSE_LOG
             dev_info(sc->dev, "STA %d uses HW encrypter for pairwise.\n", sta_priv->sta_idx);
+#endif
             sta_priv->has_hw_encrypt = true;
             sta_priv->need_sw_encrypt = false;
             sta_priv->use_mac80211_decrypt = false;
@@ -501,14 +505,18 @@ static int _set_pairwise_key_tkip_ccmp (struct ssv_softc *sc, struct ssv_vif_pri
                 vif_priv->use_mac80211_decrypt = false;
             }             
             vif_priv->has_hw_encrypt = false;
+#ifdef VERBOSE_LOG
             dev_info(sc->dev, "[Local Crypto]: Use MAC80211's encrypter.\n");               
+#endif
             ret = -EOPNOTSUPP;                
 
         } else
         {
             sta_priv->has_hw_encrypt = false;
             sta_priv->has_hw_decrypt = false;
+#ifdef VERBOSE_LOG
             dev_err(sc->dev, "STA %d MAC80211's %s cipher.\n", sta_priv->sta_idx, cipher_name);
+#endif
             sta_priv->need_sw_encrypt = false;
             sta_priv->need_sw_decrypt = false;
             sta_priv->use_mac80211_decrypt = true;
@@ -546,7 +554,9 @@ static int _set_group_key_tkip_ccmp (struct ssv_softc *sc, struct ssv_vif_priv_d
     {
         // Hardware encryption is only supported for MPDU. AMPDU connection requires
         // software encryption solution.
+#ifdef VERBOSE_LOG
         dev_info(sc->dev, "VIF %d uses HW %s cipher for group.\n", vif_priv->vif_idx, cipher_name);
+#endif
 #ifdef USE_MAC80211_DECRYPT_BROADCAST
         vif_priv->has_hw_decrypt = false;
         ret = -EOPNOTSUPP;
@@ -572,7 +582,9 @@ static int _set_group_key_tkip_ccmp (struct ssv_softc *sc, struct ssv_vif_priv_d
                 vif_priv->use_mac80211_decrypt = false;
             }            
             vif_priv->has_hw_encrypt = false;
+#ifdef VERBOSE_LOG
             dev_info(sc->dev, "[Local Crypto]: Use MAC80211's encrypter.\n");               
+#endif
             ret = -EOPNOTSUPP;
 
         } else
@@ -655,7 +667,9 @@ static int ssv6200_set_key(struct ieee80211_hw *hw,
     if ((vif_info->if_type != NL80211_IFTYPE_AP) && (vif_info->if_type != NL80211_IFTYPE_P2P_GO) && (NULL==sta) && 
 	    ((key->keyidx == 0) && (key->cipher != WLAN_CIPHER_SUITE_WEP40) &&  (key->cipher != WLAN_CIPHER_SUITE_WEP104)))
     {
+#ifdef VERBOSE_LOG
 	    printk("Warning: ssv6200_set_key return; key->cipher=0x%x\r\n", key->cipher);
+#endif
         mutex_unlock(&sc->mutex);
         return 0;
     }
@@ -700,9 +714,10 @@ static int ssv6200_set_key(struct ieee80211_hw *hw,
     }
 
     cipher = _prepare_key(key, sc);
-
+#ifdef VERBOSE_LOG
     dev_err(sc->dev,"Set key VIF %d VIF type %d STA %d algorithm = %d, key->keyidx = %d, cmd = %d\n",
             vif_priv->vif_idx, vif->type, sta_idx, cipher, key->keyidx, cmd);
+#endif
 
     if (cipher == SECURITY_CIPHER_INVALID)
     {
@@ -818,8 +833,10 @@ static int ssv6200_set_key(struct ieee80211_hw *hw,
 
                 if ((cipher == SECURITY_TKIP) || (cipher == SECURITY_CCMP))
                 {
+#ifdef VERBOSE_LOG
                     printk(KERN_ERR "Clear key %d VIF %d, STA %d\n",
                             key->keyidx, (vif != NULL), (sta != NULL));
+#endif
                     hw_crypto_key_clear(hw, key->keyidx, key, vif_priv, sta_priv);
                 }
                 // if (key->keyidx == 0)
@@ -844,6 +861,7 @@ static int ssv6200_set_key(struct ieee80211_hw *hw,
         default:
             ret = -EINVAL;
     }
+#ifdef VERBOSE_LOG
 
     if(sta_priv != NULL)
     {
@@ -858,14 +876,16 @@ static int ssv6200_set_key(struct ieee80211_hw *hw,
                 (vif_priv->has_hw_encrypt==true),(vif_priv->need_sw_encrypt==true),
                 (vif_priv->has_hw_decrypt==true),(vif_priv->need_sw_decrypt==true), (vif_priv->is_security_valid==true));
     }
-
+#endif
 
 out:
     //if (sta) {
     //up_read(&sc->sta_info_sem);/* For mac80211 cb, we use sc->mutex to protect sta_info instead of sta_info_sem. */
     //}
     mutex_unlock(&sc->mutex);
+#ifdef VERBOSE_LOG
     printk(KERN_ERR "SET KEY %d\n", ret);
+#endif
     return ret;
 }
 
@@ -1246,7 +1266,9 @@ int ssv6xxx_rx_task (void *data)
     struct ssv_softc *sc = (struct ssv_softc *)data;
     unsigned long     wait_period = msecs_to_jiffies(50);
 
+#ifdef VERBOSE_LOG
     printk("SSV6XXX RX Task started.\n");
+#endif
     while (!kthread_should_stop())
     {
         u32 before_timeout = (-1);
@@ -1258,7 +1280,9 @@ int ssv6xxx_rx_task (void *data)
 
         if (kthread_should_stop())
         {
+#ifdef VERBOSE_LOG
             printk("Quit RX task loop...\n");
+#endif
             break;
         }
 
@@ -1394,8 +1418,9 @@ static int ssv6200_start(struct ieee80211_hw *hw)
     channel_type = cfg80211_get_chandef_type(&hw->conf.chandef);
 #endif
     sc->cur_channel = chan;
+#ifdef VERBOSE_LOG
     printk("%s(): current channel: %d,sc->ps_status=%d\n", __FUNCTION__, sc->cur_channel->hw_value,sc->ps_status);
-
+#endif
     HAL_SET_CHANNEL(sc, chan, channel_type, false);   
 
     /* reset hardware to apply the configuration from mac80211 */
@@ -1421,8 +1446,9 @@ static int ssv6200_start(struct ieee80211_hw *hw)
 static void ssv6200_stop(struct ieee80211_hw *hw)
 {
     struct ssv_softc *sc=hw->priv;
-
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "%s(): sc->ps_status=%d\n", __FUNCTION__,sc->ps_status);
+#endif
     mutex_lock(&sc->mutex);
 
     sc->mac80211_dev_started = false;
@@ -1450,8 +1476,9 @@ static void ssv6200_stop(struct ieee80211_hw *hw)
 
     ssv6xxx_beacon_release(sc);
     mutex_unlock(&sc->mutex);
-
+#ifdef VERBOSE_LOG
     printk("%s(): leave, hci_txq_len %d\n", __FUNCTION__, HCI_TXQ_LEN(sc->sh));
+#endif
 }
 
 static int ssv6xxx_interface_opertaion(struct ssv_softc *sc, ssv6xxx_vif_ops ops, 
@@ -1533,9 +1560,9 @@ struct ssv_vif_priv_data * ssv6xxx_config_vif_res(struct ssv_softc *sc,
     }
 
     BUG_ON(vif_idx < 0);
-
+#ifdef VERBOSE_LOG
     printk("ssv6xxx_config_vif_res id[%d].\n", vif_idx);
-
+#endif
     priv_vif = (struct ssv_vif_priv_data *)vif->drv_priv;
     memset(priv_vif, 0, sizeof(struct ssv_vif_priv_data));
 
@@ -1586,7 +1613,9 @@ static void _if_set_apmode(struct ieee80211_hw *hw,
 #else
     chan = hw->conf.chandef.chan;
 #endif
+#ifdef VERBOSE_LOG
     printk("AP created at ch %d \n", chan->hw_value);
+#endif
 
 #ifdef CONFIG_SSV_SUPPORT_ANDROID
     if(vif->p2p == 0)
@@ -1603,9 +1632,9 @@ static int ssv6200_add_interface(struct ieee80211_hw *hw,
     struct ssv_softc *sc=hw->priv;
     int ret=0;
     struct ssv_vif_priv_data *vif_priv = NULL;
-
+#ifdef VERBOSE_LOG
     printk("[I] %s(): \n", __FUNCTION__);
-
+#endif
     // AP mode can only exist with managed(station) mode.
     if (   (sc->nvif >= SSV6200_MAX_VIF)
             || (   (   (vif->type == NL80211_IFTYPE_AP)
@@ -1627,7 +1656,9 @@ static int ssv6200_add_interface(struct ieee80211_hw *hw,
     }
     else
     {
+#ifdef VERBOSE_LOG
         dev_err(sc->dev, "Set new macaddr\n");
+#endif
         SSV_SET_MACADDR_2(sc->sh, vif_priv->vif_idx, vif->addr);
     }
     /*it is first entity, and in ap mode*/
@@ -1644,10 +1675,11 @@ static int ssv6200_add_interface(struct ieee80211_hw *hw,
 
     /* Send Host Cmd to notify interface information */
     ssv6xxx_interface_opertaion(sc, SSV6XXX_VIF_CMD_ADD, vif_priv->vif_idx, vif->addr, vif->type, false, false);
-
+#ifdef VERBOSE_LOG
     dev_err(sc->dev, "VIF %02x:%02x:%02x:%02x:%02x:%02x of type %d is added.\n",
             vif->addr[0], vif->addr[1], vif->addr[2],
             vif->addr[3], vif->addr[4], vif->addr[5], vif->type);
+#endif
 
 #ifdef CONFIG_SSV6XXX_DEBUGFS
     ssv6xxx_debugfs_add_interface(sc, vif);
@@ -1674,7 +1706,9 @@ static int ssv6200_change_interface(struct ieee80211_hw *hw,
     int                       vif_idx = vif_priv->vif_idx;
 
     mutex_lock(&sc->mutex);
+#ifdef VERBOSE_LOG
     printk("@@@@@@ change id[%d] type %d to %d, p2p=%d\n", vif_idx, sc->vif_info[vif_idx].if_type, new_type, p2p);
+#endif
     sc->vif_info[vif_idx].if_type = new_type;
     sc->force_disable_directly_ack_tx = p2p;
 
@@ -1752,7 +1786,9 @@ static void ssv6200_remove_interface(struct ieee80211_hw *hw,
         if(vif->p2p == 0)
         {
             ssv_wake_unlock(sc);
+#ifdef VERBOSE_LOG
             printk(KERN_INFO "AP mode destroy wifi_alive_lock\n");
+#endif
         }
 #endif
 
@@ -1806,8 +1842,10 @@ void ssv6xxx_enable_ps(struct ssv_softc *sc)
 
 void ssv6xxx_disable_ps(struct ssv_softc *sc)
 {
-    sc->ps_status = PWRSV_DISABLE;        
+    sc->ps_status = PWRSV_DISABLE;
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "PowerSave disabled\n");
+#endif
 }
 
 /* Return false, it match the following condition
@@ -1866,12 +1904,11 @@ static int ssv6200_config(struct ieee80211_hw *hw, u32 changed)
 
     //    printk("%s(): changed: 0x%08x\n", __FUNCTION__, changed);
     mutex_lock(&sc->mutex);
-
+#ifdef VERBOSE_LOG
     if (changed & IEEE80211_CONF_CHANGE_POWER) {
         struct ieee80211_conf *conf = &hw->conf;
         printk("IEEE80211_CONF_CHANGE_POWER change power level to %d\n", conf->power_level);
     }
-
 
     if (changed & IEEE80211_CONF_CHANGE_PS) {
         struct ieee80211_conf *conf = &hw->conf;
@@ -1881,15 +1918,20 @@ static int ssv6200_config(struct ieee80211_hw *hw, u32 changed)
             printk("Disable IEEE80211_CONF_PS ps_aid=%d\n",sc->ps_aid);
         }
     }
+#endif
 
     if (changed & IEEE80211_CONF_CHANGE_MONITOR) {
         struct ieee80211_conf *conf = &hw->conf;
         if (conf->flags & IEEE80211_CONF_MONITOR) {
+#ifdef VERBOSE_LOG
             printk("Enable IEEE80211_CONF_MONITOR\n");
+#endif
             ret=ssv6xxx_set_promisc(sc,1);
             sc->sc_flags |= SC_OP_MONITOR;
         }else{
+#ifdef VERBOSE_LOG
             printk("Disable IEEE80211_CONF_MONITOR\n"); 
+#endif
             ret=ssv6xxx_set_promisc(sc,0);
             sc->sc_flags &= ~SC_OP_MONITOR;
         }
@@ -1930,7 +1972,9 @@ static int ssv6200_config(struct ieee80211_hw *hw, u32 changed)
         //printk("@_@ %d\n",sc->ssv_smartlink_status);
         if (sc->ssv_smartlink_status)
         {
+#ifdef VERBOSE_LOG
             printk("@@ %d\n",sc->ssv_smartlink_status);
+#endif
             goto out;
         }
 #endif
@@ -1984,10 +2028,12 @@ static int ssv6200_config(struct ieee80211_hw *hw, u32 changed)
                 HAL_SET_CHANNEL(sc, chan, channel_type, true);
                 sc->boffchan = false;
             }
+#ifdef VERBOSE_LOG
             else
             {
                 dev_dbg(sc->dev, "Off-channel to %d is ignored\n", chan->hw_value);
             }
+#endif
             /* if it is not connect to any device, let it takes more time to stay in a channel */
             //            if(!sc->isAssoc)
             //                msleep(800);
@@ -2003,10 +2049,12 @@ static int ssv6200_config(struct ieee80211_hw *hw, u32 changed)
                 HCI_RESUME_HWSWQ(sc->sh, (TXQ_EDCA_0|TXQ_EDCA_1|TXQ_EDCA_2|TXQ_EDCA_3| TXQ_MGMT));
                 sc->sc_flags &= ~SC_OP_OFFCHAN;
             }
+#ifdef VERBOSE_LOG
             else
             {
                 dev_dbg(sc->dev, "Change to the same channel %d\n", chan->hw_value);
             }
+#endif
             // printk("on channel setting !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!: ch=%d\n", sc->cur_channel->hw_value);
         }
     }
@@ -2116,7 +2164,9 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
 
     //temp mark: RATE CTRL
     if (changed & BSS_CHANGED_ERP_PREAMBLE) {
+#ifdef VERBOSE_LOG
         printk("BSS Changed use_short_preamble[%d]\n", info->use_short_preamble);
+#endif
         if (info->use_short_preamble)
             sc->sc_flags |= SC_OP_SHORT_PREAMBLE;
         else
@@ -2124,7 +2174,9 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
     }
 
     if (changed & BSS_CHANGED_ERP_CTS_PROT) {
+#ifdef VERBOSE_LOG
         printk("BSS Changed use_cts_prot[%d]\n", info->use_cts_prot);
+#endif
         if (info->use_cts_prot)
             sc->sc_flags |= SC_OP_CTS_PROT;
         else
@@ -2137,16 +2189,18 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
         {
             /* Set BSSID to hardware and enable WSID entry 0 */
             SSV_SET_BSSID(sc->sh, (u8*)info->bssid, priv_vif->vif_idx);     
-
+#ifdef VERBOSE_LOG
             printk("BSS_CHANGED_BSSID: %02x:%02x:%02x:%02x:%02x:%02x\n",
                     info->bssid[0], info->bssid[1], info->bssid[2],
                     info->bssid[3], info->bssid[4], info->bssid[5]);
+#endif
         }
 
         if (changed & BSS_CHANGED_ERP_SLOT)
         {
+#ifdef VERBOSE_LOG
             printk("BSS_CHANGED_ERP_SLOT: use_short_slot[%d]\n", info->use_short_slot);
-
+#endif
             /*
                Fix MAC TX backoff issue.
                 http://192.168.1.30/mantis/view.php?id=36
@@ -2162,7 +2216,7 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
             }
         }
     }
-
+#ifdef VERBOSE_LOG
     if (changed & BSS_CHANGED_HT) {
         printk("BSS_CHANGED_HT: Untreated!!\n");
     }
@@ -2172,7 +2226,7 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
     {
         printk("ssv6xxx_rc_update_basic_rate!!\n");
     }
-
+#endif
 
     if (vif->type == NL80211_IFTYPE_STATION){
         struct ieee80211_channel *curchan;
@@ -2183,7 +2237,9 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
 #else
         curchan = hw->conf.chandef.chan;
 #endif        
+#ifdef VERBOSE_LOG
         printk("NL80211_IFTYPE_STATION!!\n");
+#endif
         // find the other interface vif idx
         if (priv_vif->vif_idx == 0)
             dual_if_vif_idx = 1;
@@ -2210,7 +2266,9 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
             }
             else{
                 sc->channel_center_freq = curchan->center_freq;
+#ifdef VERBOSE_LOG
                 printk(KERN_INFO "!!info->aid = %d\n",info->aid);
+#endif
                 for (i = 0; i < SSV_NUM_STA; i++) {
                     if (sc->sta_info[i].s_flags & STA_FLAG_VALID) {
                         if (vif == sc->sta_info[i].vif) {
@@ -2263,7 +2321,9 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
 
         if (changed & BSS_CHANGED_BEACON_INT)
         {
+#ifdef VERBOSE_LOG
             printk("[A] BSS_CHANGED_BEACON_INT beacon_interval(%d)\n", info->beacon_int);
+#endif
             if (sc->beacon_interval != info->beacon_int)
             {
                 sc->beacon_interval = info->beacon_int;
@@ -2282,7 +2342,9 @@ static void ssv6200_bss_info_changed(struct ieee80211_hw *hw,
     }
 
     mutex_unlock(&sc->mutex);
+#ifdef VERBOSE_LOG
     printk("[I] %s(): leave\n", __FUNCTION__);
+#endif
 }
 
 static int _ssv6200_sta_operation(struct ssv_softc *sc, struct ieee80211_sta *sta, int wsid, 
@@ -2363,8 +2425,9 @@ static int ssv6200_sta_add(struct ieee80211_hw *hw,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
     struct ieee80211_chanctx_conf *chanctx_conf;
 #endif
-
+#ifdef VERBOSE_LOG
     printk("[I] %s(): vif[%d] ", __FUNCTION__, vif_priv->vif_idx);
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
     chanctx_conf = vif->chanctx_conf;
     if (chanctx_conf == NULL) {
@@ -2408,12 +2471,13 @@ static int ssv6200_sta_add(struct ieee80211_hw *hw,
         spin_lock_init(&sta_priv_dat->ampdu_ctrl_lock);
         sband = sc->hw->wiphy->bands[sc->cur_channel->band];
         _ssv6200_sta_operation(sc, sta, sta_info->hw_wsid, sband, SSV6XXX_RC_CMD_INIT);
-        
+#ifdef VERBOSE_LOG
         printk("Add %02x:%02x:%02x:%02x:%02x:%02x to VIF %d sw_idx=%d, wsid=%d\n",
                 sta->addr[0], sta->addr[1], sta->addr[2],
                 sta->addr[3], sta->addr[4], sta->addr[5],
                 vif_priv->vif_idx,
                 sta_priv_dat->sta_idx, sta_info->hw_wsid);
+#endif
     } while (0);
     //up_read(&sc->sta_info_sem);/* For mac80211 cb, we use sc->mutex to protect sta_info instead of sta_info_sem. */
     mutex_unlock(&sc->mutex);
@@ -2440,7 +2504,9 @@ void ssv6200_rx_flow_check(struct ssv_sta_priv_data *sta_priv_dat,
             } else {
                 HAL_SET_RX_FLOW(sc->sh, RX_DATA_FLOW, RX_CIPHER_MIC_HCI);
             }
+#ifdef VERBOSE_LOG
             printk("redirect Rx flow for sta %d  disconnect\n",sta_priv_dat->sta_idx);
+#endif
         }      
     } 
 }
@@ -2561,7 +2627,9 @@ static int ssv6200_sta_remove(struct ieee80211_hw *hw,
     HCI_TXQ_FLUSH_BY_STA(sc->sh, hw_wsid);
     HCI_TX_RESUME_BY_STA(sc->sh, hw_wsid);
     SSV_DEL_HW_WSID(sc, hw_wsid);
+#ifdef VERBOSE_LOG
     printk("hw wsid %u is removed.\n", hw_wsid);
+#endif
     up_write(&sc->sta_info_sem);
     HCI_TXQ_UNLOCK_BY_STA(sc->sh, hw_wsid);
     mutex_unlock(&sc->mutex);
@@ -2617,7 +2685,9 @@ static u64 ssv6200_get_tsf(struct ieee80211_hw *hw,
         struct ieee80211_vif *vif)
 #endif
 {
+#ifdef VERBOSE_LOG
     printk("%s(): \n", __FUNCTION__);
+#endif
     return 0;
 }
 
@@ -2684,8 +2754,9 @@ static void ssv6200_sw_scan_start(struct ieee80211_hw *hw)
 #endif
 
     sc->bScanning = true;
-
+#ifdef VERBOSE_LOG
     printk("--------------%s(): \n", __FUNCTION__);
+#endif
 }
 
 
@@ -2716,7 +2787,9 @@ static void ssv6200_sw_scan_complete(struct ieee80211_hw *hw)
 
     sc->bScanning = false;
 
+#ifdef VERBOSE_LOG
     printk("==============%s(): \n", __FUNCTION__);
+#endif
 }
 
 
@@ -2779,11 +2852,16 @@ static int ssv6200_conf_tx(struct ieee80211_hw *hw,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
     struct ssv_vif_priv_data *priv_vif = (struct ssv_vif_priv_data *)vif->drv_priv;
 
+#ifdef VERBOSE_LOG
     printk("[I] sv6200_conf_tx vif[%d] qos[%d] queue[%d] aifsn[%d] cwmin[%d] cwmax[%d] txop[%d] \n",
             priv_vif->vif_idx ,vif->bss_conf.qos, queue, params->aifs, params->cw_min, params->cw_max, params->txop);
+#endif
 #else
+
+#ifdef VERBOSE_LOG
     printk("[I] sv6200_conf_tx queue[%d] aifsn[%d] cwmin[%d] cwmax[%d] txop[%d] \n",
             queue, params->aifs, params->cw_min, params->cw_max, params->txop);
+#endif
 #endif
 
     if (queue > NL80211_TXQ_Q_BK) {
@@ -2837,7 +2915,9 @@ static int ssv6xxx_ampdu_opertaion(struct ssv_softc *sc, ssv6xxx_ampdu_ops ops, 
     struct ssv_ampdu_param *ptr = NULL;
     int ret = 0;
 
+#ifdef VERBOSE_LOG
     printk("%s() tid %d, wsid %d\n", __FUNCTION__, tid, wsid);
+#endif
     skb = ssv_skb_alloc(sc, HOST_CMD_HDR_LEN + sizeof(struct ssv_ampdu_param));
     if (skb == NULL) {
         printk("%s(): Fail to alloc cmd buffer.\n", __FUNCTION__);
@@ -2986,10 +3066,11 @@ static int ssv6200_ampdu_action(struct ieee80211_hw *hw,
             break;
 
         case IEEE80211_AMPDU_TX_START:
+#ifdef VERBOSE_LOG
             printk(KERN_ERR "AMPDU_TX_START %02X:%02X:%02X:%02X:%02X:%02X %d.\n",
                     sta->addr[0], sta->addr[1], sta->addr[2], sta->addr[3],
                     sta->addr[4], sta->addr[5], tid);
-
+#endif
             sta_priv = (struct ssv_sta_priv_data *)sta->drv_priv;
             if (sta_priv->ampdu_tid_state[tid] != SSV_AMPDU_1_3_TX_START) {
                 //spin_lock_bh(&sta_priv->ampdu_ctrl_lock);
@@ -3020,9 +3101,11 @@ static int ssv6200_ampdu_action(struct ieee80211_hw *hw,
         case IEEE80211_AMPDU_TX_STOP_FLUSH:
         case IEEE80211_AMPDU_TX_STOP_FLUSH_CONT:
 #endif
+#ifdef VERBOSE_LOG
             printk(KERN_ERR "AMPDU_TX_STOP %02X:%02X:%02X:%02X:%02X:%02X %d.\n",
                     sta->addr[0], sta->addr[1], sta->addr[2], sta->addr[3],
                     sta->addr[4], sta->addr[5], tid);
+#endif
             sta_priv = (struct ssv_sta_priv_data *)sta->drv_priv;
             //spin_lock_bh(&sta_priv->ampdu_ctrl_lock);
             sta_priv->ampdu_tid_state[tid] = SSV_AMPDU_1_3_TX_STOP;
@@ -3032,9 +3115,11 @@ static int ssv6200_ampdu_action(struct ieee80211_hw *hw,
             break;
 
         case IEEE80211_AMPDU_TX_OPERATIONAL:
+#ifdef VERBOSE_LOG
             printk(KERN_ERR "AMPDU_TX_OPERATIONAL %02X:%02X:%02X:%02X:%02X:%02X %d.\n",
                     sta->addr[0], sta->addr[1], sta->addr[2], sta->addr[3],
                     sta->addr[4], sta->addr[5], tid);
+#endif
             break;
 
         default:
@@ -3102,7 +3187,9 @@ EXIT:
 static int ssv6200_set_bitrate_mask(struct ieee80211_hw *hw,
         struct ieee80211_vif *vif, const struct cfg80211_bitrate_mask *mask)
 {
+#ifdef VERBOSE_LOG
     printk("%s start\n", __FUNCTION__);
+#endif
     return 0;
 }
 
@@ -3264,10 +3351,11 @@ void ssv6200_tx_flow_control(struct ssv_softc *sc, bool fc_en, bool force_stop)
 
     if (sc->sh->cfg.flowctl) {
 
+#ifdef VERBOSE_LOG
         if (sc->log_ctrl & LOG_FLOWCTL) {
             printk(KERN_ERR "hci_tx_frame = %d\n", HCI_TXQ_LEN(sc->sh));
         }
-
+#endif
         sc->flowctl_hci_cnt = HCI_TXQ_LEN(sc->sh);   
         tx_frame = sc->flowctl_hci_cnt;   
         sc->flowctl_frame_cnt = tx_frame;
@@ -3426,7 +3514,9 @@ static void ssv6xxx_proc_data_rx_skb (struct ssv_softc *sc, struct sk_buff *rx_s
         }
     }
     if (HAL_UPDATE_RXSTATUS(sc, rx_skb, rxs) == -1){
+#ifdef VERBOSE_LOG
         printk(" KRACK detected!!\n");
+#endif
         goto drop_rx;
     }
 
@@ -3867,7 +3957,9 @@ static void ssv6xxx_ack_ctl_notify_process(struct ssv_softc *sc, u8 ack, u8 seq_
         if (skb) {
             struct SKB_info_st *mpdu_skb_info_p = (SKB_info *)(skb->head);
             if (mpdu_skb_info_p->directly_ack) {
+#ifdef VERBOSE_LOG
                 printk("sw ack use directack\n");
+#endif
                 ssv_skb_free(sc, skb);
                 ssv6200_tx_flow_control(sc, false, false);
                 continue;
@@ -3896,7 +3988,9 @@ static void ssv6xxx_ack_ctl_notify_process(struct ssv_softc *sc, u8 ack, u8 seq_
                #endif 
                 } else {
                     hdr = (struct ieee80211_hdr *)skb->data;
+#ifdef VERBOSE_LOG
                     printk("Ack ctl frame[%d] receive ack\n", (le16_to_cpu(hdr->seq_ctrl) >> 4));
+#endif
                     ssvxxx_complete_tx_skb(sc, tx_info, skb, wsid);
                 }
                 ssv6200_tx_flow_control(sc, false, false);
@@ -3997,7 +4091,9 @@ static bool _process_host_event(struct ssv_softc *sc, struct sk_buff *skb)
             }
             break;
         case SOC_EVT_SDIO_TXTPUT_RESULT:
+#ifdef VERBOSE_LOG
             printk("data SDIO TX throughput %d Kbps\n", h_evt->evt_seq_no);
+#endif
             dev_kfree_skb_any(skb);
             break;
         case SOC_EVT_TXLOOPBK_RESULT:

@@ -36,9 +36,9 @@ int ssv6xxx_init_hwif_hal(struct ssv6xxx_platform_data **priv, struct ssv_hwif_h
     if (   strstr((*priv)->chip_id, SSV6006)
         	 || strstr((*priv)->chip_id, SSV6006C)
         	 || strstr((*priv)->chip_id, SSV6006D)) {
-
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Attach SSV6006 family HWIF HAL function  \n");
-
+#endif
         ssv_attach_hwif_hal_ssv6006(priv, hwif_hal_ops);
         chip_supportted = true;
     }
@@ -46,7 +46,9 @@ int ssv6xxx_init_hwif_hal(struct ssv6xxx_platform_data **priv, struct ssv_hwif_h
 #ifdef SSV_SUPPORT_SSV6020
     if (strstr((*priv)->chip_id, SSV6020B)
         || strstr((*priv)->chip_id, SSV6020C)) {
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Attach SSV6020 family HWIF HAL function  \n");
+#endif
         ssv_attach_hwif_hal_ssv6020(priv, hwif_hal_ops);
         chip_supportted = true;
     }

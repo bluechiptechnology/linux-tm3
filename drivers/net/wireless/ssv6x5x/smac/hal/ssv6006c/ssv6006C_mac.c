@@ -844,15 +844,18 @@ static void ssv6006c_set_aes_tkip_hw_crypto_group_key(struct ssv_softc *sc,
         return;   
 
     BUG_ON(key_idx == 0);
-
+#ifdef VERBOSE_LOG
     printk("Set CCMP/TKIP group key index %d to WSID %d.\n", key_idx, wsid);
+#endif
 
     if (vif_info->vif_priv == NULL) {
         dev_err(sc->dev, "NULL VIF.\n");
         return;
     }
 
+#ifdef VERBOSE_LOG
     dev_info(sc->dev, "Write group key index %d to VIF %d \n", key_idx, vif_info->vif_priv->vif_idx);
+#endif
     _ssv6006c_write_group_keyidx_to_hw(sc->sh, key_idx, vif_info->vif_priv->vif_idx);
 }
 
@@ -887,8 +890,9 @@ static int ssv6006c_write_pairwise_key_to_hw(struct ssv_softc *sc,
         dev_err(sc->dev, "Set pair-wise key to invalid WSID %d.\n", wsid);
         return -EOPNOTSUPP;
     }
-
+#ifdef VERBOSE_LOG
     dev_info(sc->dev, "Set STA %d's pair-wise key of %d bytes.\n", wsid, key_len);
+#endif
 
     if(index >= 0)
         ssv6006c_write_pairwise_keyidx_to_hw(sc->sh, index, wsid);
@@ -910,8 +914,10 @@ static int ssv6006c_write_group_key_to_hw(struct ssv_softc *sc,
         return -EOPNOTSUPP;
     }
 
+#ifdef VERBOSE_LOG
     dev_info(sc->dev, "Setting VIF %d group key %d of length %d to WSID %d.\n",
             vif_priv->vif_idx, index, key_len, wsid);
+#endif
 
     /*save group key index */
     vif_priv->group_key_idx = index;
@@ -1020,7 +1026,9 @@ static void ssv6006c_pmu_awake(struct ssv_softc *sc)
     ptr->aid = sc->ps_aid;
     ptr->ops = SSV6XXX_PS_WAKEUP_FINISH;
     ptr->seqno = (u8)sc->ps_event_cnt;
+#ifdef VERBOSE_LOG
     printk("%s() ps cmd: %d\n", __FUNCTION__, ptr->seqno);
+#endif
     sc->ps_event_cnt++;
     if (128 == sc->ps_event_cnt)
         sc->ps_event_cnt = 0;
@@ -1065,15 +1073,19 @@ static void ssv6006c_set_wep_key(struct ssv_softc *sc, struct ssv_vif_priv_data 
 {
     if ((vif_priv->has_hw_decrypt == true) && (vif_priv->has_hw_encrypt == true)) {
         //store all wep key in group_key[] of BSSIDX
+#ifdef VERBOSE_LOG
         printk("Store WEP key index %d to HW group_key[%d] of VIF %d\n", key->keyidx, key->keyidx,vif_priv->vif_idx);
+#endif
         ssv6xxx_foreach_vif_sta(sc, &sc->vif_info[vif_priv->vif_idx], ssv6006c_set_wep_hw_crypto_setting, key);
 
         if (key->keyidx) 
             _ssv6006c_write_group_keyidx_to_hw(sc->sh, key->keyidx, vif_priv->vif_idx);
         _ssv6006c_write_group_key_to_hw(sc->sh, vif_priv->vif_idx, key->cipher, key->keyidx, key->key, key->keylen);
     }
+#ifdef VERBOSE_LOG
     else
         printk("Not support HW security\n");
+#endif
 }
 
 static void ssv6006c_set_replay_ignore(struct ssv_hw *sh,u8 ignore)
@@ -1261,10 +1273,12 @@ static u32 ssv6006c_alloc_pbuf(struct ssv_softc *sc, int size, int type)
     if (regval == 0)
         dev_err(sc->dev, "Failed to allocate packet buffer of %d bytes in %d type.",
                 size, type);
+#ifdef VERBOSE_LOG
     else {
         dev_info(sc->dev, "Allocated %d type packet buffer of size %d (%d) at address %x.\n",
                 type, size, page_cnt, regval);
     }
+#endif
 
     return regval;
 }
@@ -1296,7 +1310,9 @@ static bool ssv6006c_free_pbuf(struct ssv_softc *sc, u32 pbuf_addr)
     // {HWID[3:0], PKTID[6:0]}
     regval = ((M_ENG_TRASH_CAN << HW_ID_OFFSET) |(pbuf_addr >> ADDRESS_OFFSET));
 
+#ifdef VERBOSE_LOG
     printk("[A] ssv6xxx_pbuf_free addr[%08x][%x]\n", pbuf_addr, regval);
+#endif
     SMAC_REG_WRITE(sc->sh, ADR_CH0_TRIG_1, regval);
 
     if (*p_tx_page_cnt)
@@ -1403,9 +1419,11 @@ static void ssv6006c_beacon_loss_config(struct ssv_hw *sh, u16 beacon_int, const
     u32   mac_31_0;
     u16   mac_47_32;
 
+#ifdef VERBOSE_LOG
     dbgprint(&sc->cmd_data, sc->log_ctrl, LOG_BEACON, 
             "%s(): beacon_int %x, bssid %02x:%02x:%02x:%02x:%02x:%02x\n", 
             __FUNCTION__, beacon_int, bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
+#endif
 
     memcpy(&mac_31_0, bssid, 4);
     memcpy(&mac_47_32, bssid+4, 2);
@@ -3176,7 +3194,9 @@ static int ssv6006c_init_hci_rx_aggr(struct ssv_hw *sh)
     int i = 0;
 
     if (sh->cfg.hw_caps & SSV6200_HW_CAP_HCI_TX_AGGR) {
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "Enable HCI TX aggregation\n");
+#endif
         //SMAC_REG_WRITE(sh,0xc1000004, 0x40000003);
         SMAC_REG_SET_BITS(sh, ADR_HCI_TRX_MODE, (1<<HCI_TX_AGG_EN_SFT), HCI_TX_AGG_EN_MSK);
     }
@@ -3638,19 +3658,26 @@ void ssv_attach_ssv6006(struct ssv_softc *sc, struct ssv_hal_ops *hal_ops)
     ssv_hwif_read_reg(sc, ADR_CHIP_TYPE_VER, &regval);
     chip_type = regval >>24;
 
+#ifdef VERBOSE_LOG
     printk(KERN_INFO"Chip type %x\n", chip_type);
+#endif
 
     if (chip_type == CHIP_TYPE_CHIP){
-
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Load SSV6006 HAL common PHY function \n");
+#endif
         ssv_attach_ssv6006_phy(hal_ops);
         if (strstr(priv->chip_id, SSV6006C)
                 || strstr(priv->chip_id, SSV6006D)){     
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006C/D HAL BB-RF function \n");
+#endif
             ssv_attach_ssv6006_turismoC_BBRF(hal_ops); // for mp chip;
 #ifdef SSV_SUPPORT_SSV6006AB            
         } else {
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006 HAL shuttle BB-RF function \n");
+#endif
             ssv_attach_ssv6006_turismoB_BBRF(hal_ops); // for shuttle chip;           
 #endif            
         }
@@ -3661,17 +3688,23 @@ void ssv_attach_ssv6006(struct ssv_softc *sc, struct ssv_hal_ops *hal_ops)
 
         if (strstr(&fpga_tag[0], FPGA_PHY_5)){
             // for phy5
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006 HAL common PHY function \n");
+#endif
             ssv_attach_ssv6006_phy(hal_ops);
             ssv_hwif_read_reg(sc, ADR_GEMINA_TRX_VER, &regval);
             if (regval == RF_GEMINA) {
+#ifdef VERBOSE_LOG
                 printk(KERN_INFO"Load SSV6006 HAL GeminiA BB-RF function \n");
+#endif
                 ssv_attach_ssv6006_geminiA_BBRF(hal_ops);
 #ifdef SSV_SUPPORT_TURISMOA
             } else {
                 ssv_hwif_read_reg(sc, ADR_GEMINA_TRX_VER, &regval);
                 if (regval == RF_TURISMOA) {
+#ifdef VERBOSE_LOG
                     printk(KERN_INFO"Load SSV6006 HAL TurismoA BB-RF function \n");
+#endif
                     ssv_attach_ssv6006_turismoA_BBRF(hal_ops);
                 }  
 #endif            
@@ -3680,9 +3713,13 @@ void ssv_attach_ssv6006(struct ssv_softc *sc, struct ssv_hal_ops *hal_ops)
 #ifdef SSV6006_SUPPORT_CABRIOA        
         } else if (ic_time_tag == FPGA_PHY_4) {
             // for phy4
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006 HAL common PHY function \n");
+#endif
             ssv_attach_ssv6006_phy(hal_ops);
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006 HAL CabrioA BB-RF function \n");
+#endif
             ssv_attach_ssv6006_cabrioA_BBRF(hal_ops);
 #endif        
         }

@@ -723,14 +723,18 @@ static size_t ssv6xxx_sdio_get_aggr_readsz(struct device *child, int mode)
     sdio_release_host(func);
     
     if (0 == size) {
+#ifdef VERBOSE_LOG
         printk("dlen = 0, read 0xc1000010, orig value 0x%08x\n", tmp);
+#endif
         ret = glue->p_wlan_data->ops->readreg(child, 0xc1000010, &buf);
         if (ret) {
             printk("sdio read 0xc1000010 err %d\n", ret);
             size = 0;
         } else {
             size = (size_t)(buf & 0xffff);
+#ifdef VERBOSE_LOG
             printk("read size = %d\n", (int)size);
+#endif
         }
     }
     
@@ -1188,8 +1192,9 @@ static void ssv6xxx_sdio_read_parameter(struct sdio_func *func,
     glue->regIOPort = glue->regIOPort | (sdio_readb(func, REG_REG_IO_PORT_0, &err_ret) << ( 8*0 ));
     glue->regIOPort = glue->regIOPort | (sdio_readb(func, REG_REG_IO_PORT_1, &err_ret) << ( 8*1 ));
     glue->regIOPort = glue->regIOPort | (sdio_readb(func, REG_REG_IO_PORT_2, &err_ret) << ( 8*2 ));
-
+#ifdef VERBOSE_LOG
     dev_err(&func->dev, "dataIOPort 0x%x regIOPort 0x%x\n",glue->dataIOPort,glue->regIOPort);
+#endif
 
 #ifdef CONFIG_PLATFORM_SDIO_BLOCK_SIZE
     err_ret = sdio_set_block_size(func,CONFIG_PLATFORM_SDIO_BLOCK_SIZE);
@@ -1283,11 +1288,12 @@ static void ssv6xxx_sdio_setup_scat_data(struct sdio_scatter_req *scat_req,
 
 	data->blksz = SDIO_DEF_BLOCK_SIZE;
 	data->blocks = scat_req->len / SDIO_DEF_BLOCK_SIZE;
-
+#ifdef VERBOSE_LOG
 	printk("scatter: (%s)  (block len: %d, block count: %d) , (tot:%d,sg:%d)\n",
 		   (scat_req->req & SDIO_WRITE) ? "WR" : "RD", 
 		   data->blksz, data->blocks, scat_req->len,
 		   scat_req->scat_entries);
+#endif
 
 	data->flags = (scat_req->req & SDIO_WRITE) ? MMC_DATA_WRITE :
 						    MMC_DATA_READ;
@@ -1298,9 +1304,11 @@ static void ssv6xxx_sdio_setup_scat_data(struct sdio_scatter_req *scat_req,
 
 	/* assemble SG list */
 	for (i = 0; i < scat_req->scat_entries; i++, sg++) {
+#ifdef VERBOSE_LOG
 		printk("%d: addr:0x%p, len:%d\n",
 			   i, scat_req->scat_list[i].buf,
 			   scat_req->scat_list[i].len);
+#endif
 
 		sg_set_buf(sg, scat_req->scat_list[i].buf,
 			   scat_req->scat_list[i].len);
@@ -1447,7 +1455,9 @@ static void ssv6xxx_set_sdio_clk(struct sdio_func *func, u32 sdio_hz)
 	else if (sdio_hz > host->f_max)
 		sdio_hz = host->f_max;
 
+#ifdef VERBOSE_LOG
 	printk("%s: set sdio clk %dHz\n", __FUNCTION__, sdio_hz);
+#endif
 	sdio_claim_host(func);
 	host->ios.clock = sdio_hz;
 	host->ops->set_ios(host, &host->ios);
@@ -1632,8 +1642,9 @@ static int ssv6xxx_sdio_resume_early(struct device *child)
 
     if (!glue)
 	    return 0;
-
+#ifdef VERBOSE_LOG
     dev_info(glue->dev, "%s: start.\n", __FUNCTION__);
+#endif
 	func = dev_to_sdio_func(glue->dev);
     /*****************************************************************/
     /*                                                               */
@@ -1705,7 +1716,9 @@ static int ssv6xxx_sdio_resume_early(struct device *child)
 
     ssv6xxx_sdio_irq_setmask(&glue->core->dev, 0xff & ~SSV6XXX_INT_RX);
 
+#ifdef VERBOSE_LOG
     dev_info(glue->dev, "%s: end.\n", __FUNCTION__);
+#endif
 
     return 0;
 }
@@ -1822,8 +1835,9 @@ static int ssv6xxx_sdio_power_on(struct ssv6xxx_platform_data * pdata, struct sd
 	if (pdata->is_enabled == true)
 		return 0;
 
+#ifdef VERBOSE_LOG
     printk("ssv6xxx_sdio_power_on\n");
-
+#endif
 	sdio_claim_host(func);
 	ret = sdio_enable_func(func);
 	sdio_release_host(func);
@@ -1991,7 +2005,9 @@ static int ssv6xxx_sdio_power_off(struct ssv6xxx_platform_data * pdata, struct s
 	if (pdata->is_enabled == false)
 		return 0;
     
+#ifdef VERBOSE_LOG
     printk("ssv6xxx_sdio_power_off\n");
+#endif
 
 	/* Disable the card */
 	sdio_claim_host(func);
@@ -2084,8 +2100,10 @@ static void ssv6xxx_sdio_delay_chain(struct sdio_func *func, u32 input_delay, u3
             delay[i] |= ((out_delay-1) << SDIO_OUTPUT_DELAY_LEVEL_SFT);
     }
 
+#ifdef VERBOSE_LOG
     printk("%s: delay chain data0[%02x], data1[%02x], data2[%02x], data3[%02x]\n", 
         __FUNCTION__, delay[0], delay[1], delay[2], delay[3]);
+#endif
 
     //set sdio delay value
     sdio_claim_host(func);
@@ -2111,17 +2129,19 @@ static int ssv6xxx_sdio_probe(struct sdio_func *func,
     //struct resource res[1];
     //mmc_pm_flag_t mmcflags;
     int ret = -ENOMEM;
-
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "=======================================\n");
     printk(KERN_INFO "==           RUN SDIO                ==\n");
     printk(KERN_INFO "=======================================\n");
-    
+#endif
 
     /* We are only able to handle the wlan function */
     if (func->num != 0x01)
         return -ENODEV;
 
+#ifdef VERBOSE_LOG
     printk("max block count: %u\n", min(func->card->host->max_blk_count, 511u));
+#endif
 
     glue = kzalloc(sizeof(*glue), GFP_KERNEL);
     if (!glue)
@@ -2275,7 +2295,9 @@ static void ssv6xxx_sdio_remove(struct sdio_func *func)
 {
     struct ssv6xxx_sdio_glue *glue = sdio_get_drvdata(func);
     int ret = 0;//lyh
+#ifdef VERBOSE_LOG
     printk("ssv6xxx_sdio_remove..........\n");
+#endif
     
     /* Undo decrement done above in ssv6xxx_probe */
     //pm_runtime_get_noresume(&func->dev);
@@ -2293,7 +2315,9 @@ static void ssv6xxx_sdio_remove(struct sdio_func *func)
         //Setting SDIO to 25M
 		ssv6xxx_low_sdio_clk(func);
 
+#ifdef VERBOSE_LOG
         printk("ssv6xxx_sdio_remove - disable mask\n");
+#endif
         ssv6xxx_sdio_irq_setmask(&glue->core->dev,0xff);
         
         // fw enter dormant  
@@ -2301,10 +2325,14 @@ static void ssv6xxx_sdio_remove(struct sdio_func *func)
         
         ssv6xxx_sdio_power_off(glue->p_wlan_data, func);
 
+#ifdef VERBOSE_LOG
         printk("platform_device_del \n");
+#endif
         platform_device_del(glue->core);
 
+#ifdef VERBOSE_LOG
         printk("platform_device_put \n");
+#endif
         platform_device_put(glue->core);
                    
 	    //if (ssv_rx_use_wq) {
@@ -2319,7 +2347,9 @@ static void ssv6xxx_sdio_remove(struct sdio_func *func)
     }
     sdio_set_drvdata(func, NULL);
 
+#ifdef VERBOSE_LOG
     printk("ssv6xxx_sdio_remove leave..........\n");
+#endif
 }
 
 #ifdef CONFIG_PM
@@ -2375,13 +2405,17 @@ EXPORT_SYMBOL(ssv6xxx_sdio_driver);
 
 int ssv6xxx_sdio_init(void)
 {
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "ssv6xxx_sdio_init\n");
+#endif
     return sdio_register_driver(&ssv6xxx_sdio_driver);
 }
 
 void ssv6xxx_sdio_exit(void)
 {
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "ssv6xxx_sdio_exit\n");
+#endif
     sdio_unregister_driver(&ssv6xxx_sdio_driver);
 }
 

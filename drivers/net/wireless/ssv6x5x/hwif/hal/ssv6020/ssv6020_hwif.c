@@ -189,14 +189,18 @@ void ssv_attach_hwif_hal_ssv6020(struct ssv6xxx_platform_data **priv, struct ssv
 
     ssv_hwif_read_reg(priv, ADR_CHIP_TYPE_VER, &regval);
     chip_type = (regval>>24);
-
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "Chip type %x\n", chip_type);
-
+#endif
     if (chip_type == CHIP_TYPE_CHIP){
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Load SSV6020 ASIC HAL HWIF function \n");
+#endif
         ssv_attach_ssv6020_hwif(hwif_hal_ops);
     } else {
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Load SSV6020 FPGA HAL HWIF function \n");
+#endif
         ssv_attach_ssv6020_hwif(hwif_hal_ops);
     }
 

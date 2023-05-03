@@ -217,7 +217,9 @@ static int ssv6020_turismoE_set_channel(struct ssv_softc *sc, struct ieee80211_c
         }
     }
 #endif
+#ifdef VERBOSE_LOG
     printk("chan change ch %d, type %d, off_chan %d\n", ptr->chan, ptr->chan_type, ptr->off_chan);
+#endif
     ret = HCI_SEND_CMD(sc->sh, skb);
 
     // update tx power
@@ -1256,9 +1258,13 @@ static void ssv6020_turismoE_chg_xtal_freq_offset(struct ssv_hw *sh)
         sh->rf_table.ht_config.freq_xo = sh->cfg.crystal_frequency_offset;
         sh->rf_table.ht_2_config.freq_xi = sh->cfg.crystal_frequency_offset;
         sh->rf_table.ht_2_config.freq_xo = sh->cfg.crystal_frequency_offset;
+#ifdef VERBOSE_LOG
         printk("freq xi/xo use value %d/%d\n", sh->rf_table.rt_config.freq_xi, sh->rf_table.rt_config.freq_xo);
+#endif
     } else {
+#ifdef VERBOSE_LOG
         printk("freq xi/xo use default value %d/%d\n", sh->rf_table.rt_config.freq_xi, sh->rf_table.rt_config.freq_xo);
+#endif
     }
 }
 
@@ -1328,12 +1334,16 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if (((value + sh->cfg.rf_b_rate_offset) > 0) && ((value + sh->cfg.rf_b_rate_offset) <= 15 ))
                 {
                     value += sh->cfg.rf_b_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain b gain offset %d, value %d\n", sh->cfg.rf_b_rate_offset, value);
+#endif
                 }
             }
             
             ssv6020_turismoE_chg_cck_bbscale(sh, value);
+#ifdef VERBOSE_LOG
             printk("rate gain b use value %d\n", value);
+#endif
         }
         else
         {
@@ -1343,12 +1353,15 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if (((value + sh->cfg.rf_b_rate_offset) > 0) && ((value + sh->cfg.rf_b_rate_offset) <= 15 ))
                 {
                     value += sh->cfg.rf_b_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain b gain offset %d, value %d\n", sh->cfg.rf_b_rate_offset, value);
+#endif
                     ssv6020_turismoE_chg_cck_bbscale(sh, value);
                 }
             }
-            
+#ifdef VERBOSE_LOG
             printk("rate gain b use default value\n");
+#endif
         }
     }
 
@@ -1369,7 +1382,9 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if (((value + sh->cfg.rf_g_rate_offset) > 0) && ((value + sh->cfg.rf_g_rate_offset) <= MAX_OFDM_RATE_GAIN_INDEX ))
                 {
                     value += sh->cfg.rf_g_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain g gain offset %d, value %d\n", sh->cfg.rf_g_rate_offset, value);
+#endif
                 }
             }
             
@@ -1378,9 +1393,14 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                                                     value+OFDM_RATE_GAIN_QPSK_OFFSET, 
                                                     value+OFDM_RATE_GAIN_16QAM_OFFSET, 
                                                     value+OFDM_RATE_GAIN_64QAM_OFFSET);
+#ifdef VERBOSE_LOG
                 printk("rate gain legacy use value %d\n", value);
-            } else
+#endif
+            }
+#ifdef VERBOSE_LOG
+            else
                 printk("incorrect rate gain legacy index value %d\n", value);
+#endif
         } else {
 
             if (sh->cfg.rf_g_rate_offset != 0)
@@ -1389,15 +1409,18 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if (((value + sh->cfg.rf_g_rate_offset) > 0) && ((value + sh->cfg.rf_g_rate_offset) <= MAX_OFDM_RATE_GAIN_INDEX ))
                 {
                     value += sh->cfg.rf_g_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain g gain offset %d, value %d\n", sh->cfg.rf_g_rate_offset, value);
+#endif
                     ssv6020_turismoE_chg_legacy_bbscale(sh, value+OFDM_RATE_GAIN_BPSK_OFFSET, 
                                                     value+OFDM_RATE_GAIN_QPSK_OFFSET, 
                                                     value+OFDM_RATE_GAIN_16QAM_OFFSET, 
                                                     value+OFDM_RATE_GAIN_64QAM_OFFSET);
                 }
             }
-             
+#ifdef VERBOSE_LOG
             printk("rate gain legacy use default value\n");
+#endif
         }
     }
 
@@ -1418,7 +1441,9 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if (((value + sh->cfg.rf_ht20_rate_offset) > 0) && ((value + sh->cfg.rf_ht20_rate_offset) <= MAX_OFDM_RATE_GAIN_INDEX ))
                 {
                     value += sh->cfg.rf_ht20_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain ht20 gain offset %d\n", sh->cfg.rf_ht20_rate_offset);
+#endif
                 }
             }
             if (value>0 && value <= MAX_OFDM_RATE_GAIN_INDEX) {
@@ -1427,9 +1452,14 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                         value+OFDM_RATE_GAIN_QPSK_OFFSET,
                         value+OFDM_RATE_GAIN_16QAM_OFFSET,
                         value+OFDM_RATE_GAIN_64QAM_OFFSET);
+#ifdef VERBOSE_LOG
                 printk("rate gain ht20 use value %d\n", value);
-            } else
+#endif
+            }
+#ifdef VERBOSE_LOG
+            else
                 printk("incorrect rate gain ht20 index value %d\n", value);
+#endif
         } else {
             if (sh->cfg.rf_ht20_rate_offset != 0)
             {
@@ -1437,7 +1467,9 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if ((value + sh->cfg.rf_ht20_rate_offset) > 0 && ((value + sh->cfg.rf_ht20_rate_offset) <= MAX_OFDM_RATE_GAIN_INDEX ))
                 {
                     value += sh->cfg.rf_ht20_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain ht20 gain offset %d, value %d\n", sh->cfg.rf_ht20_rate_offset, value);
+#endif
                     ssv6020_turismoE_chg_ht20_bbscale(sh,
                         value+OFDM_RATE_GAIN_BPSK_OFFSET,
                         value+OFDM_RATE_GAIN_QPSK_OFFSET,
@@ -1445,7 +1477,9 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                         value+OFDM_RATE_GAIN_64QAM_OFFSET);
                 }
             }
+#ifdef VERBOSE_LOG
             printk("rate gain ht20 use default value\n");
+#endif
         }
     }
 
@@ -1466,7 +1500,9 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if (((value + sh->cfg.rf_ht40_rate_offset) > 0) && ((value + sh->cfg.rf_ht40_rate_offset) <= MAX_OFDM_RATE_GAIN_INDEX ))
                 {
                     value += sh->cfg.rf_ht40_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain ht40 gain offset %d, value %d\n", sh->cfg.rf_ht40_rate_offset, value);
+#endif
                 }
             }
             if (value>0 && value <= MAX_OFDM_RATE_GAIN_INDEX) {
@@ -1475,9 +1511,14 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                         value+OFDM_RATE_GAIN_QPSK_OFFSET,
                         value+OFDM_RATE_GAIN_16QAM_OFFSET,
                         value+OFDM_RATE_GAIN_64QAM_OFFSET);
+#ifdef VERBOSE_LOG
                 printk("rate gain ht40 use value %d\n", value);
-            } else
+#endif
+            }
+#ifdef VERBOSE_LOG
+             else
                 printk("incorrect rate gain ht40 index value %d\n", value);
+#endif
         } else {
             if (sh->cfg.rf_ht40_rate_offset != 0)
             {
@@ -1485,7 +1526,9 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                 if (((value + sh->cfg.rf_ht40_rate_offset) > 0) && ((value + sh->cfg.rf_ht40_rate_offset) <= MAX_OFDM_RATE_GAIN_INDEX ))
                 {
                     value += sh->cfg.rf_ht40_rate_offset;
+#ifdef VERBOSE_LOG
                     printk("rate gain ht40 gain offset %d, value %d\n", sh->cfg.rf_ht40_rate_offset, value);
+#endif
                     ssv6020_turismoE_chg_ht40_bbscale(sh,
                         value+OFDM_RATE_GAIN_BPSK_OFFSET,
                         value+OFDM_RATE_GAIN_QPSK_OFFSET,
@@ -1493,7 +1536,9 @@ static void ssv6020_turismoE_chg_bbscale(struct ssv_hw *sh)
                         value+OFDM_RATE_GAIN_64QAM_OFFSET);
                 }
             }
+#ifdef VERBOSE_LOG
             printk("rate gain ht40 use default value\n");
+#endif
         }
     }
 }
@@ -1519,11 +1564,14 @@ static void ssv6020_turismoE_chg_dpd_bbscale(struct ssv_hw *sh)
             if (((band_gain + sh->cfg.rf_band_gain_offset) > 0) && ((band_gain + sh->cfg.rf_band_gain_offset) <= 15 ))
             {
                 band_gain += sh->cfg.rf_band_gain_offset;
+#ifdef VERBOSE_LOG
                 printk("band gain offset %d, value %d\n", sh->cfg.rf_band_gain_offset, band_gain);
+#endif
             }
         }
-        
+#ifdef VERBOSE_LOG
         printk("band gain use %d\n", band_gain);
+#endif
         for (i = 0; i < MAX_2G_BAND_GAIN; i++) {
             sh->rf_table.rt_config.band_gain[i] = band_gain;
             sh->rf_table.lt_config.band_gain[i] = band_gain;
@@ -1538,7 +1586,9 @@ static void ssv6020_turismoE_chg_dpd_bbscale(struct ssv_hw *sh)
             if (((band_gain + sh->cfg.rf_band_gain_offset) > 0) && ((band_gain + sh->cfg.rf_band_gain_offset) <= 15))
             {
                 band_gain += sh->cfg.rf_band_gain_offset;
+#ifdef VERBOSE_LOG
                 printk("band gain offset %d, value %d\n", sh->cfg.rf_band_gain_offset, band_gain);
+#endif
                 for (i = 0; i < MAX_2G_BAND_GAIN; i++) {
                     sh->rf_table.rt_config.band_gain[i] = band_gain;
                     sh->rf_table.lt_config.band_gain[i] = band_gain;
@@ -1549,8 +1599,9 @@ static void ssv6020_turismoE_chg_dpd_bbscale(struct ssv_hw *sh)
             }
         }
         
-      
+#ifdef VERBOSE_LOG
         printk("band gain use default value\n");
+#endif
     }
     // 6020 not support 5G band.
 }

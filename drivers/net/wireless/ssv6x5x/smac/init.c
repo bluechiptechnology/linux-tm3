@@ -565,17 +565,19 @@ int ssv6xxx_load_firmware(struct ssv_hw *sh)
 
     if (sh->cfg.external_firmware_name[0] != 0x00)
     {
+#ifdef VERBOSE_LOG
         printk(KERN_INFO "Forced to use firmware \"%s\".\n",
                sh->cfg.external_firmware_name);
-        
+#endif
         strncpy(firmware_name, sh->cfg.external_firmware_name,
                 SSV_FIRMWARE_MAX-1);
     }
     else
     {
         SSV_GET_FW_NAME(sh, firmware_name);
-
+#ifdef VERBOSE_LOG
         printk(KERN_INFO "Using firmware \"%s\".\n", firmware_name); 
+#endif
     }
 
     if (firmware_name[0] == 0x00)
@@ -590,7 +592,9 @@ int ssv6xxx_load_firmware(struct ssv_hw *sh)
                  firmware_name);
         // Open firmware by open file api
         ret = HAL_LOAD_FW(sh,temp_path, 1);
+#ifdef VERBOSE_LOG
         printk(KERN_INFO "Using firmware at %s\n", temp_path);
+#endif
     }
     else if (sh->cfg.firmware_path[0] != 0x00)
     {
@@ -598,7 +602,9 @@ int ssv6xxx_load_firmware(struct ssv_hw *sh)
                  sh->cfg.firmware_path, firmware_name);
          // Open firmware by open file api
         ret = HAL_LOAD_FW(sh,temp_path, 1);
+#ifdef VERBOSE_LOG
         printk(KERN_INFO "Using firmware at %s\n", temp_path);
+#endif
     }
     else
     {
@@ -616,23 +622,28 @@ int ssv6xxx_init_mac(struct ssv_hw *sh)
     struct ssv_softc *sc=sh->sc;
     int    ret=0;
 //-----------------------------------------------------------------------------------------------------------------------------------------
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "SVN version %d\n", ssv_root_version);
     printk(KERN_INFO "SVN ROOT URL %s \n", SSV_ROOT_URl);
     printk(KERN_INFO "COMPILER HOST %s \n", COMPILERHOST);
     printk(KERN_INFO "COMPILER DATE %s \n", COMPILERDATE);
     printk(KERN_INFO "COMPILER OS %s \n", COMPILEROS);
     printk(KERN_INFO "COMPILER OS ARCH %s \n", COMPILEROSARCH);
-
+#endif
 
 //-----------------------------------------------------------------------------------------------------------------------------------------
 //for power saving
     if(sc->ps_status == PWRSV_ENABLE){
 
 #ifdef CONFIG_SSV_SUPPORT_ANDROID    
+#ifdef VERBOSE_LOG
         printk(KERN_INFO "%s: wifi Alive lock timeout after 3 secs!\n",__FUNCTION__);
+#endif
         {
             ssv_wake_timeout(sc, 3);
+#ifdef VERBOSE_LOG
             printk(KERN_INFO "wifi Alive lock!\n");
+#endif
         }
 #endif
 
@@ -677,7 +688,9 @@ void ssv6xxx_deinit_mac(struct ssv_softc *sc)
 
 void inline ssv6xxx_deinit_hw(struct ssv_softc *sc)
 {
+#ifdef VERBOSE_LOG
     printk("%s(): \n", __FUNCTION__);
+#endif
     ssv6xxx_deinit_mac(sc);
     
     /* it cannot detect usb if insmod/rmmod usb-core modules */
@@ -985,11 +998,11 @@ void ssv6xxx_restart_hw(struct work_struct *work)
 {
     struct ssv_softc *sc = container_of(work, struct ssv_softc, hw_restart_work);
     int i = 0;
-
+#ifdef VERBOSE_LOG
     printk("**************************\n");
     printk("*** Software MAC reset ***\n");
     printk("**************************\n");
-
+#endif
     if (sc->sc_flags & SC_OP_HW_RESET) {
         printk("Reset is running.\n");
         return;
@@ -1149,25 +1162,32 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
         return 0;
     }
     
+#ifdef VERBOSE_LOG
    printk("str_table = %s\n", str_table);
-    
+#endif    
     memset(&sh->htc_config,0,sizeof(struct hw_temp_compensation_config));
     
     p_tmp = m_strtok(&str_table,",",0);
     if (p_tmp != NULL)
     {
+#ifdef VERBOSE_LOG
         printk("read temp range config\n");
+#endif
         // TEMP COUNT
         temp_range_count = simple_strtoul(p_tmp, &endp, 0);
         if (temp_range_count > MAX_LENTH_OF_TABLE_COMPENSATION)
         {
+#ifdef VERBOSE_LOG
             printk("temp_range_count(%d) is too big\n", temp_range_count);
+#endif
         }
        else
         {
             sh->htc_config.exist = 1;
             sh->htc_config.hw_temp_boundary_levels = temp_range_count;
+#ifdef VERBOSE_LOG
             printk("temp_range_count [%d]\n", temp_range_count);
+#endif
             for ( i = 1; i <= sh->htc_config.hw_temp_boundary_levels; i++)
             {
                // TEMP VAULE
@@ -1184,7 +1204,9 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
                     }
                     
                     sh->htc_config.hw_temp_items[i].temp = temp_value;
+#ifdef VERBOSE_LOG
                     printk("hw_temp_items[%d] temp=%d\n", i, sh->htc_config.hw_temp_items[i].temp);
+#endif
 
                     // REG COUNT 
                     p_tmp = m_strtok(&str_table,",", 0);
@@ -1192,10 +1214,14 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
                     if (p_tmp != NULL)
                     {
                         reg_count = simple_strtoul(p_tmp, &endp, 0);
+#ifdef VERBOSE_LOG
                         printk("reg_count = %d\n", reg_count);
+#endif
                         if (reg_count > MAX_REG_COUNT_OF_TABLE_COMPENSATION)
                         {
+#ifdef VERBOSE_LOG
                             printk("temp config reg_count invalid\n");
+#endif
                             sh->htc_config.exist = 0;
                            return sh->htc_config.exist;
                         }
@@ -1217,9 +1243,11 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
                                 sh->htc_config.hw_tem_reg_items[i][j].reg = address;
                                 sh->htc_config.hw_tem_reg_items[i][j].vaule= value;
                                 
+#ifdef VERBOSE_LOG
                                 printk("i[%d],temp[%d], j[%d] reg[0x%08x:0x%08x]\n", i, sh->htc_config.hw_temp_items[i].temp, j,
                                     sh->htc_config.hw_tem_reg_items[i][j].reg,
                                     sh->htc_config.hw_tem_reg_items[i][j].vaule);
+#endif
                             }
                        }
                     }
@@ -1238,7 +1266,9 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
                }
             }
 
+#ifdef VERBOSE_LOG
             printk("read normal temp config\n");
+#endif
             // NORMAL TEMP VAULE
             p_tmp = m_strtok(&str_table,",", 0);
            
@@ -1249,7 +1279,9 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
                 //printk("temp_value = %d\n", temp_value);
                 if (temp_value != 0xff)
                 {
+#ifdef VERBOSE_LOG
                     printk("temp config invalid 6 \n");
+#endif
                     return sh->htc_config.exist;
                 }
                 
@@ -1258,10 +1290,14 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
                 if (p_tmp!=NULL)
                 {
                     reg_count = simple_strtoul(p_tmp, &endp, 0);
+#ifdef VERBOSE_LOG
                    printk("reg_count = %d\n", reg_count);
+#endif
                     if (reg_count > MAX_REG_COUNT_OF_TABLE_COMPENSATION)
                     {
+#ifdef VERBOSE_LOG
                         printk("temp config invalid 7 \n");
+#endif
                         sh->htc_config.exist = 0;
                         return sh->htc_config.exist;
                     }
@@ -1277,16 +1313,20 @@ static int ssv6xxx_read_host_thermal_compensation_table(struct ssv_hw *sh)
                                 ret = sscanf(p_tmp, "0x%08x:0x%08x", &address, &value);
                                 if (ret != 2)
                                 {
+#ifdef VERBOSE_LOG
                                     printk("temp config invalid 8\n");
+#endif
                                     sh->htc_config.exist = 0;
                                     return sh->htc_config.exist;
                                 }
                                 sh->htc_config.hw_tem_reg_items[0][j].reg = address;
                                 sh->htc_config.hw_tem_reg_items[0][j].vaule= value;
                                 
+#ifdef VERBOSE_LOG
                                 printk("temp[%d], reg[0x%08x:0x%08x]\n", sh->htc_config.hw_temp_items[0].temp, 
                                     sh->htc_config.hw_tem_reg_items[0][j].reg,
                                     sh->htc_config.hw_tem_reg_items[0][j].vaule);
+#endif
                            }
                         }
                     }
@@ -1415,7 +1455,9 @@ static int ssv6xxx_read_hw_info(struct ssv_softc *sc)
 
     //CHIP TAG
     SSV_GET_IC_TIME_TAG(sh);
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "CHIP TAG: %llx \n", sh->chip_tag);
+#endif
     
     //Read configuraion from extern configuraion.
     if (ssv6xxx_read_configuration(sh))
@@ -1591,9 +1633,13 @@ static void ssv6xxx_deinit_device(struct ssv_softc *sc)
 #if (CONFIG_BLE_HCI_BUS == SSV_BLE_HCI_OVER_SDIO)
     if(NULL!=ssv_hdev)
     {
+#ifdef VERBOSE_LOG
         printk("Unregister BLE HCI device \n");
+#endif
         hci_unregister_dev(ssv_hdev);
+#ifdef VERBOSE_LOG
         printk("Free BLE HCI device \n");
+#endif
         hci_free_dev(ssv_hdev);
     }
 #endif //#if (CONFIG_BLE_HCI_BUS == SSV_BLE_HCI_OVER_SDIO)
@@ -1611,7 +1657,9 @@ int ssv_ble_register(struct ssv_softc *sc)
     struct platform_device *pdev=NULL;
     int id=0;
 
+#ifdef VERBOSE_LOG
     printk(KERN_ERR "\33[32m%s():%d \33[0m\r\n",__FUNCTION__ ,__LINE__);
+#endif
     if(NULL==sc)
     {
         printk(KERN_ERR "%s():sc is an null pointer\r\n",__FUNCTION__);
@@ -1647,7 +1695,9 @@ int ssv_ble_register(struct ssv_softc *sc)
     
     /* Register HCI device */
     id = hci_register_dev(ssv_hdev);
+#ifdef VERBOSE_LOG
     printk("hci device id:%d\n",id);
+#endif
 	if (id< 0) {
 		dev_err(&pdev->dev, "Can't register HCI device");
 		hci_free_dev(ssv_hdev);
@@ -1671,8 +1721,9 @@ int ssv6xxx_dev_probe(struct platform_device *pdev)
         dev_err(&pdev->dev, "no platform data specified!\n");
         return -EINVAL;
     }
-    
+#ifdef VERBOSE_LOG    
     printk("%s(): SSV6X5X device \"%s\" found !\n", __FUNCTION__, pdev->name);
+#endif
 #ifdef SSV_MAC80211
 	hw = ieee80211_alloc_hw_nm(sizeof(struct ssv_softc), &ssv6200_ops,"icomm");
 #else
@@ -1707,7 +1758,9 @@ int ssv6xxx_dev_probe(struct platform_device *pdev)
     #endif
 
     #if (CONFIG_BLE_HCI_BUS == SSV_BLE_HCI_OVER_SDIO)
+#ifdef VERBOSE_LOG
     printk("\n\ncfg.ble_dtm %d \n\n", sc->sh->cfg.ble_dtm);
+#endif
     if (sc->sh->cfg.ble_dtm) {
         HCI_BLE_START(sc->sh);
         ssv_ble_init(sc, 0);
@@ -1753,33 +1806,45 @@ static void ssv6xxx_stop_all_running_threads(struct ssv_softc *sc)
     HCI_IRQ_DISABLE(hci_ctrl);
 
     if (sc->ssv_txtput.txtput_tsk) {
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "Stopping txtput task...\n");
+#endif
         kthread_stop(sc->ssv_txtput.txtput_tsk);
         while (sc->ssv_txtput.txtput_tsk != NULL) {
             msleep(1);
         }
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "txtput task is stopped.\n");        
+#endif
     }
 
     ssv6xxx_cancel_work_sync(sc);
 
     if (sc->rx_task != NULL)
     {
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "Stopping RX task...\n");
+#endif
         kthread_stop(sc->rx_task);
         while (sc->rx_task != NULL) {
             msleep(1);
         }
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "RX task is stopped.\n");    
+#endif
     }
 
     if(sc->sh->hci.hci_ctrl->hci_tx_task != NULL) {
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "Stopping HCI TX task...\n");
+#endif
         kthread_stop(sc->sh->hci.hci_ctrl->hci_tx_task);
         while(sc->sh->hci.hci_ctrl->hci_tx_task != NULL) {
             msleep(1);
         }
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "HCI TX task is stopped.\n");
+#endif
     }
 
 }
@@ -1789,7 +1854,9 @@ int ssv6xxx_dev_remove(struct platform_device *pdev)
     struct ieee80211_hw *hw=dev_get_drvdata(&pdev->dev);
     struct ssv_softc *sc=hw->priv;
     
+#ifdef VERBOSE_LOG
     printk("ssv6xxx_dev_remove(): pdev=%p, hw=%p\n", pdev, hw);
+#endif
 #ifdef CONFIG_BLE
     ssv_ble_init(sc, 1);
 #endif
@@ -1802,9 +1869,13 @@ int ssv6xxx_dev_remove(struct platform_device *pdev)
 
     ssv6xxx_deinit_device(sc);
 
+#ifdef VERBOSE_LOG
     printk("ieee80211_free_hw(): \n");
+#endif
     ieee80211_free_hw(hw);
+#ifdef VERBOSE_LOG
     pr_info("ssv6200: Driver unloaded\n");
+#endif
     return 0;
 }
 
@@ -1875,8 +1946,10 @@ static int device_match_by_alias(struct device *dev, void *data)
     if (!strcmp(driver->name, pattern->driver_name) && !strcmp("", pattern->device_name))
         return 1;
 	else {
+#ifdef VERBOSE_LOG
 	    printk("%s: driver[%s][%s], device[%s][%s]\n", __FUNCTION__, driver->name, pattern->driver_name, 
 		    dev_name(dev), pattern->device_name);
+#endif
 		return 0;
     }
 }

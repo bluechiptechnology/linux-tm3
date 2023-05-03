@@ -197,7 +197,9 @@ void efuse_read_all_map(struct ssv_hw *sh)
         if(!sh->cfg.ignore_efuse_mac)
         {
             if (is_valid_ether_addr(efuse_mac_new)) {
+#ifdef VERBOSE_LOG
                 printk("MAC address from e-fuse\n");
+#endif
                 memcpy(&sh->cfg.maddr[0][0], efuse_mac_new, ETH_ALEN);
                 addr_increase_copy(&sh->cfg.maddr[1][0], efuse_mac_new);
                 goto Done;
@@ -210,7 +212,9 @@ void efuse_read_all_map(struct ssv_hw *sh)
                 mac[jj] = _key_2char2num(ssv_initmac[kk], ssv_initmac[kk+ 1]);
             }
             if(is_valid_ether_addr(mac)) {
+#ifdef VERBOSE_LOG
                 printk("MAC address from insert module\n");
+#endif
                 memcpy(&sh->cfg.maddr[0][0],mac,ETH_ALEN);
                 addr_increase_copy(&sh->cfg.maddr[1][0],mac);
                 goto Done;
@@ -222,7 +226,9 @@ void efuse_read_all_map(struct ssv_hw *sh)
         {
             if((readfile_mac(sh->cfg.mac_address_path,&sh->cfg.maddr[0][0])) && (is_valid_ether_addr(&sh->cfg.maddr[0][0])))
             {
+#ifdef VERBOSE_LOG
                 printk("MAC address from sh->cfg.mac_address_path[wifi.cfg]\n");
+#endif
                 addr_increase_copy(&sh->cfg.maddr[1][0], &sh->cfg.maddr[0][0]);
                 goto Done;
             }
@@ -261,10 +267,13 @@ void efuse_read_all_map(struct ssv_hw *sh)
             addr_increase_copy(&sh->cfg.maddr[1][0], pseudo_mac0);
             break;
         }
+#ifdef VERBOSE_LOG
         printk("MAC address from Software MAC mode[%d]\n",sh->cfg.mac_address_mode);
+#endif
     }
 		
 Done:
+#ifdef VERBOSE_LOG
     printk("EFUSE configuration\n");
     printk("Read efuse chip identity[%08x]\n", sh->cfg.chip_identity);
     printk("crystal_frequency_offset- %x\n", sh->cfg.crystal_frequency_offset);
@@ -272,5 +281,8 @@ Done:
 	printk("MAC address - %pM\n", efuse_mac_new);
     printk("rate_table_1- %x\n", sh->cfg.rate_table_1);
     printk("rate_table_2- %x\n", sh->cfg.rate_table_2);
+#else
+    ;
+#endif
 }
  

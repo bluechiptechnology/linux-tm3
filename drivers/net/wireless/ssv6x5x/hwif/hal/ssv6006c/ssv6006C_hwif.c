@@ -195,26 +195,34 @@ void ssv_attach_hwif_hal_ssv6006(struct ssv6xxx_platform_data **priv, struct ssv
 
     ssv_hwif_read_reg(priv, ADR_CHIP_TYPE_VER, &regval);
     chip_type = regval >>24;
-    
+#ifdef VERBOSE_LOG
     printk(KERN_INFO"Chip type %x\n", chip_type);
-    
+#endif
     if (chip_type == CHIP_TYPE_CHIP){
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Load SSV6006 HWIF HAL HWIF function \n");
+#endif
         ssv_attach_ssv6006_hwif(hwif_hal_ops);
     } else {
         if (strstr(&fpga_tag[0], FPGA_PHY_5)){
             // TODO:for phy5
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006 HWIF HAL HWIF function \n");
+#endif
             ssv_attach_ssv6006_hwif(hwif_hal_ops);
     #ifdef SSV6006_SUPPORT_CABRIOA        
         } else if (ic_time_tag == FPGA_PHY_4) {
             // TODO:for phy4
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006 HWIF HAL HWIF function \n");
+#endif
             ssv_attach_ssv6006_hwif(hwif_hal_ops);
     #endif        
         } else {
             // TODO:others is for phy 3
+#ifdef VERBOSE_LOG
             printk(KERN_INFO"Load SSV6006 HWIF HAL HWIF function \n");
+#endif
             ssv_attach_ssv6006_hwif(hwif_hal_ops);
         }
     }

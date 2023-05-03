@@ -620,8 +620,9 @@ static int _ssv6020_write_pairwise_keyidx_to_hw(struct ssv_hw *sh, int key_idx, 
     memset(ptr, 0, sizeof(struct ssv_sec_param));
     ptr->wsid_idx = wsid;
     ptr->key_idx = key_idx;
-
+#ifdef VERBOSE_LOG
     printk("%s, wsid_idx %d, key_idx %d\n", __FUNCTION__, ptr->wsid_idx, ptr->key_idx);
+#endif
     retval = HCI_SEND_CMD(sc->sh, skb);
     return retval;
 }
@@ -652,8 +653,9 @@ static int _ssv6020_write_group_keyidx_to_hw(struct ssv_hw *sh, int key_idx, int
     memset(ptr, 0, sizeof(struct ssv_sec_param));
     ptr->vif_idx = vif_idx;
     ptr->key_idx = key_idx;
-
+#ifdef VERBOSE_LOG
     printk("%s, vif_idx %d, ptr->key_idx %d\n", __FUNCTION__, vif_idx, key_idx);
+#endif
     retval = HCI_SEND_CMD(sc->sh, skb);
     return retval;
 }
@@ -684,8 +686,9 @@ static int _ssv6020_set_pairwise_cipher_type(struct ssv_hw *sh, u8 cipher, u8 ws
     memset(ptr, 0, sizeof(struct ssv_sec_param));
     ptr->wsid_idx = wsid;
     ptr->cipher = cipher;
-
+#ifdef VERBOSE_LOG
     printk("%s, wsid_idx %d, cipher %d\n", __FUNCTION__, ptr->wsid_idx, ptr->cipher);
+#endif
     retval = HCI_SEND_CMD(sc->sh, skb);
     return retval;
 }
@@ -716,8 +719,9 @@ static int _ssv6020_set_group_cipher_type(struct ssv_hw *sh, u8 cipher, u8 vif_i
     memset(ptr, 0, sizeof(struct ssv_sec_param));
     ptr->vif_idx = vif_idx;
     ptr->cipher = cipher;
-
+#ifdef VERBOSE_LOG
     printk("%s, vif_idx %d, cipher %d\n", __FUNCTION__, vif_idx, cipher);
+#endif
     retval = HCI_SEND_CMD(sc->sh, skb);
     return retval;
 }
@@ -757,9 +761,10 @@ static int _ssv6020_write_pairwise_key_to_hw(struct ssv_hw *sh,
     ptr->key_len = key_len;
     ptr->alg = algorithm;
     memcpy((u8 *)ptr->key, (u8 *)key, key_len);
-
+#ifdef VERBOSE_LOG
     printk("%s, wsid_idx %d, key_idx %d, key_len %d, alg %d\n",
             __FUNCTION__, ptr->wsid_idx, ptr->key_idx, ptr->key_len, ptr->alg);
+#endif
 
     retval = HCI_SEND_CMD(sc->sh, skb);
     //Restore PN value if need.
@@ -814,10 +819,10 @@ static int _ssv6020_write_group_key_to_hw(struct ssv_hw *sh,
     ptr->key_len = key_len;
     ptr->alg = algorithm;
     memcpy((u8 *)ptr->key, (u8 *)key, key_len);
-
+#ifdef VERBOSE_LOG
     printk("%s, vif_idx %d, key_idx %d, key_len %d, alg %d\n",
             __FUNCTION__, ptr->vif_idx, ptr->key_idx, ptr->key_len, ptr->alg);
-
+#endif
     retval = HCI_SEND_CMD(sc->sh, skb);
     //Restore PN value if need.
     if((p_hw_sec != NULL) && (p_hw_sec->bss_group[vif_idx].group_cipher_type != SECURITY_NONE))
@@ -849,15 +854,17 @@ static void ssv6020_set_aes_tkip_hw_crypto_group_key(struct ssv_softc *sc,
         return;
 
     BUG_ON(key_idx == 0);
-
+#ifdef VERBOSE_LOG
     printk("Set CCMP/TKIP group key index %d to WSID %d.\n", key_idx, wsid);
-
+#endif
     if (vif_info->vif_priv == NULL) {
         dev_err(sc->dev, "NULL VIF.\n");
         return;
     }
 
+#ifdef VERBOSE_LOG
     dev_info(sc->dev, "Write group key index %d to VIF %d \n", key_idx, vif_info->vif_priv->vif_idx);
+#endif
     _ssv6020_write_group_keyidx_to_hw(sc->sh, key_idx, vif_info->vif_priv->vif_idx);
 }
 
@@ -893,7 +900,9 @@ static int ssv6020_write_pairwise_key_to_hw(struct ssv_softc *sc,
         return -EOPNOTSUPP;
     }
 
+#ifdef VERBOSE_LOG
     dev_info(sc->dev, "Set STA %d's pair-wise key of %d bytes.\n", wsid, key_len);
+#endif
 
     if(index >= 0)
         ssv6020_write_pairwise_keyidx_to_hw(sc->sh, index, wsid);
@@ -907,16 +916,19 @@ static int ssv6020_write_group_key_to_hw(struct ssv_softc *sc,
         struct ssv_vif_priv_data *vif_priv,
         struct ssv_sta_priv_data *sta_priv)
 {
-
+#ifdef VERBOSE_LOG
     int wsid = sta_priv ? sta_priv->sta_info->hw_wsid : (-1);/* sta_info is already protected by ssv6200_set_key(). */
+#endif
 
     if (vif_priv == NULL) {
         dev_err(sc->dev, "Setting group key to NULL VIF\n");
         return -EOPNOTSUPP;
     }
 
+#ifdef VERBOSE_LOG
     dev_info(sc->dev, "Setting VIF %d group key %d of length %d to WSID %d.\n",
             vif_priv->vif_idx, index, key_len, wsid);
+#endif
 
     /*save group key index */
     vif_priv->group_key_idx = index;
@@ -939,13 +951,17 @@ static void ssv6020_write_key_to_hw(struct ssv_softc *sc, struct ssv_vif_priv_da
 
 static void ssv6020_set_pairwise_cipher_type(struct ssv_hw *sh, u8 cipher, u8 wsid)
 {
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "Set parewise key type %d\n", cipher);
+#endif
     _ssv6020_set_pairwise_cipher_type(sh, cipher, wsid);
 }
 
 static void ssv6020_set_group_cipher_type(struct ssv_hw *sh, struct ssv_vif_priv_data *vif_priv, u8 cipher)
 {
+#ifdef VERBOSE_LOG
     printk(KERN_INFO "Set group key type %d\n", cipher);
+#endif
     _ssv6020_set_group_cipher_type(sh, cipher, vif_priv->vif_idx);
 }
 
@@ -1025,7 +1041,9 @@ static void ssv6020_pmu_awake(struct ssv_softc *sc)
     ptr->aid = sc->ps_aid;
     ptr->ops = SSV6XXX_PS_WAKEUP_FINISH;
     ptr->seqno = (u8)sc->ps_event_cnt;
+#ifdef VERBOSE_LOG
     printk("%s() ps cmd: %d\n", __FUNCTION__, ptr->seqno);
+#endif
     sc->ps_event_cnt++;
     if (128 == sc->ps_event_cnt)
         sc->ps_event_cnt = 0;
@@ -1068,7 +1086,9 @@ static void ssv6020_set_wep_key(struct ssv_softc *sc, struct ssv_vif_priv_data *
 {
     if ((vif_priv->has_hw_decrypt == true) && (vif_priv->has_hw_encrypt == true)) {
         //store all wep key in group_key[] of BSSIDX
+#ifdef VERBOSE_LOG
         printk("Store WEP key index %d to HW group_key[%d] of VIF %d\n", key->keyidx, key->keyidx,vif_priv->vif_idx);
+#endif
         ssv6xxx_foreach_vif_sta(sc, &sc->vif_info[vif_priv->vif_idx], ssv6020_set_wep_hw_crypto_setting, key);
 
         _ssv6020_set_group_cipher_type(sc->sh, cipher, vif_priv->vif_idx);
@@ -1206,8 +1226,9 @@ static void ssv6020_set_wmm_param(struct ssv_softc *sc,
     if (sc->sh->cfg.backoff_enable) {
         u32 backoff = 0;
         u32 aifs2 = 0x1f2102;
-        
+#ifdef VERBOSE_LOG
         printk("set fix backoff value 0x%x, aifs2 0x%x\n", backoff, aifs2);
+#endif
         SET_TXQ0_MTX_Q_RND_MODE(0x4);
         SET_TXQ0_MTX_Q_BKF_CNT_FIX(backoff);
         SMAC_REG_WRITE(sc->sh, ADR_TXQ0_MTX_Q_AIFSN, aifs2);
@@ -1335,8 +1356,9 @@ static bool ssv6020_free_pbuf(struct ssv_softc *sc, u32 pbuf_addr)
 
     // {HWID[3:0], PKTID[6:0]}
     regval = ((M_ENG_TRASH_CAN << HW_ID_OFFSET) |(pbuf_addr >> ADDRESS_OFFSET));
-
+#ifdef VERBOSE_LOG
     printk("[A] ssv6xxx_pbuf_free addr[%08x][%x]\n", pbuf_addr, regval);
+#endif
     SMAC_REG_WRITE(sc->sh, ADR_CH0_TRIG_1, regval);
 
     if (*p_tx_page_cnt)
@@ -2382,7 +2404,9 @@ static int ssv6020_init_hci_rx_aggr(struct ssv_hw *sh)
     int i = 0;
 
     if (sh->cfg.hw_caps & SSV6200_HW_CAP_HCI_TX_AGGR) {
+#ifdef VERBOSE_LOG
         printk(KERN_ERR "Enable HCI TX aggregation\n");
+#endif
         //SMAC_REG_WRITE(sh,0xc1000004, 0x40000003);
         SMAC_REG_SET_BITS(sh, ADR_HCI_TRX_MODE, (1<<HCI_TX_AGG_EN_SFT), HCI_TX_AGG_EN_MSK);
     }
@@ -2890,28 +2914,43 @@ void ssv_attach_ssv6020(struct ssv_softc *sc, struct ssv_hal_ops *hal_ops)
 
     // get ic time tag to identify phy v4.
     ic_time_tag = _ssv6020_get_ic_time_tag(sc);
-
+#ifdef VERBOSE_LOG
     printk(KERN_INFO"Load SSV6020 common code\n");
+#endif
     ssv_attach_ssv6020_common(hal_ops);
+#ifdef VERBOSE_LOG
     printk(KERN_INFO"Load SSV6020 HAL MAC function \n");
+#endif
     ssv_attach_ssv6020_mac(hal_ops);
+#ifdef VERBOSE_LOG
     printk(KERN_INFO"Load SSV6020 HAL PHY function \n");
+#endif
     ssv_attach_ssv6020_phy(hal_ops);
+#ifdef VERBOSE_LOG
     printk(KERN_INFO"Load SSV6020 HAL BB-RF function \n");
+#endif
     ssv_attach_ssv6020_turismoE_BBRF(hal_ops);
 
     ssv_hwif_read_reg(sc, ADR_CHIP_TYPE_VER, &regval);
     chip_type = regval >>24;
 
+#ifdef VERBOSE_LOG
     printk(KERN_INFO"Chip type %x\n", chip_type);
+#endif
 
     if (chip_type == CHIP_TYPE_CHIP){
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Load SSV6020 HAL ASIC EXT BB-RF function \n");
+#endif
         ssv_attach_ssv6020_turismoE_ext_BBRF(hal_ops);
     } else {
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Load SSV6020 HAL FPGA MAC function \n");
+#endif
         ssv_attach_ssv6020_fpga_mac(hal_ops);
+#ifdef VERBOSE_LOG
         printk(KERN_INFO"Load SSV6020 HAL FPGA BB-RF function \n");
+#endif
         ssv_attach_ssv6020_turismoE_fpga_BBRF(hal_ops);
     }
 }

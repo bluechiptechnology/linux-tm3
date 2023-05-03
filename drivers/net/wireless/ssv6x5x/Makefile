@@ -64,8 +64,20 @@ ccflags-y += -DCONFIG_SSV6XXX_DEBUGFS
 ccflags-y += -DCONFIG_SDIO_FAVOR_RX
 ccflags-y += -DCONFIG_MMC_DISALLOW_STACK
 ccflags-y += -DSSV6X5X_PM_MOD
+
+ifeq ($(CONFIG_SSV6X5X_HCI_BLE),y)
 ccflags-y += -DCONFIG_BLE
 ccflags-y += -DCONFIG_BLE_HCI_BUS=1
+endif
+
+ifeq ($(CONFIG_SSV6X5X_VERBOSE),y)
+ccflags-y += -DVERBOSE_LOG
+endif
+
+ifeq ($(CONFIG_ANDROID),y)
+ccflags-y += -DCONFIG_SSV_SUPPORT_ANDROID
+endif
+
 #------------------------------
 # ssvdevice/
 KERN_SRCS := ssvdevice/ssvdevice.c
@@ -95,6 +107,10 @@ KERN_SRCS += smac/ssv_wifi_ctl.c
 ifeq ($(findstring -DCONFIG_SSV_SMARTLINK, $(ccflags-y)), -DCONFIG_SSV_SMARTLINK)
 KERN_SRCS += smac/kssvsmart.c
 endif
+endif
+
+ifeq ($(findstring -DCONFIG_SSV_SUPPORT_ANDROID, $(ccflags-y)), -DCONFIG_SSV_SUPPORT_ANDROID)
+KERN_SRCS += smac/ssv_pm.c
 endif
 
 KERN_SRCS += smac/hal/hal.c
