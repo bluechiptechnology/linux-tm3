@@ -51,7 +51,11 @@
 	#define get_ds() KERNEL_DS
 #endif
 
+#ifdef CONFIG_ANDROID
+#define STA_CFG_PATH "/vendor/etc/ssv6x5x-wifi.cfg"
+#else
 #define STA_CFG_PATH "/lib/firmware/ssv6x5x-wifi.cfg"
+#endif
 
 MODULE_AUTHOR("iComm-semi, Ltd");
 MODULE_DESCRIPTION("Shared library for SSV wireless LAN cards.");
