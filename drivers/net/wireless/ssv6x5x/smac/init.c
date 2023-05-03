@@ -623,7 +623,7 @@ int ssv6xxx_init_mac(struct ssv_hw *sh)
     int    ret=0;
 //-----------------------------------------------------------------------------------------------------------------------------------------
 #ifdef VERBOSE_LOG
-    printk(KERN_INFO "SVN version %d\n", ssv_root_version);
+    printk(KERN_INFO "SVN version %d\n", SSV_ROOT_VERSION);
     printk(KERN_INFO "SVN ROOT URL %s \n", SSV_ROOT_URl);
     printk(KERN_INFO "COMPILER HOST %s \n", COMPILERHOST);
     printk(KERN_INFO "COMPILER DATE %s \n", COMPILERDATE);

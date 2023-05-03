@@ -1043,7 +1043,7 @@ static int ssv_cmd_version (struct ssv_softc *sc, int argc, char *argv[]) {
     ssv_cmd_get_chip_id(sc, chip_id);
     snprintf_res(cmd_data, "CHIP ID: %s \n", chip_id);
 
-    snprintf_res(cmd_data, "# current Software mac version: %d\n", ssv_root_version);
+    snprintf_res(cmd_data, "# current Software mac version: %d\n", SSV_ROOT_VERSION);
 
     snprintf_res(cmd_data, "COMPILER DATE %s \n", COMPILERDATE);
 

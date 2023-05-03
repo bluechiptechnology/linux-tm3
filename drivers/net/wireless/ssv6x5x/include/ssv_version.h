@@ -1,7 +1,7 @@
 #ifndef _SSV_VERSION_H_
 #define _SSV_VERSION_H_
 
-static u32 ssv_root_version = 170;
+#define SSV_ROOT_VERSION 170
 
 #define SSV_ROOT_URl "svn://10.10.20.32/host/SMAC/trunk/ssv6x5x"
 #define COMPILERHOST "ub1server"
