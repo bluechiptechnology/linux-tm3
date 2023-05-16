@@ -76,6 +76,8 @@ endif
 
 ifeq ($(CONFIG_ANDROID),y)
 ccflags-y += -DCONFIG_SSV_SUPPORT_ANDROID
+ccflags-y += -DCONFIG_HAS_WAKELOCK
+
 endif
 
 #------------------------------
