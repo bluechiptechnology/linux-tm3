@@ -564,3 +564,7 @@ device_type = "lcd0";
 	status = "disabled";
 };
 
+&ac200_codec {
+	// disable / enable CLASS-D amplifier
+	gpio-spk = <&r_pio PM 1 1 0 1 0>;
+};

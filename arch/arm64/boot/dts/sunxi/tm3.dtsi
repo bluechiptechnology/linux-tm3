@@ -582,7 +582,6 @@
 	compatible = "allwinner,ac200_codec";
 	status = "okay";
 	device_type = "ac200_codec";
-	gpio-spk = <&r_pio PM 1 1 0 1 0>;
 };
 
 &twi3
