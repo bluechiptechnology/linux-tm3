@@ -6,7 +6,14 @@ $(obj)/$(libnand) : FORCE
 ifneq ($(wildcard $(obj)/lib),)
 	$(MAKE) -C $(obj)/.. build
 endif
+
+	@echo "KSRC_DIR:$(KSRC_DIR)"
+ifeq ($(KSRC_DIR),)
 	cp $(obj)/$(basename $(libnand)) $@
+else
+	cp $(KSRC_DIR)/$(obj)/$(basename $(libnand)) $@
+endif
+
 
 nand-objs += nand_interface.o \
 	nfd/nand_ota_burn.o \
