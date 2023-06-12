@@ -459,6 +459,16 @@ device_type = "lcd0";
 		status = "disabled";
 	};
 
+	pcap3: eeti@2a {
+		compatible = "eeti,egalax_i2c";
+		reg = <0x2A>;
+		interrupt-parent = <&pio>;
+		interrupts = <7 7 IRQ_TYPE_EDGE_FALLING>; /* PH7 */
+		int-gpios = <&pio PH 7 1 0 0 0xffffffff>;
+		linux,wakeup;
+		status = "disabled";
+	};
+
 	/* RTC */
 	rtc_pcf: pcf8523@66 {
 		compatible = "nxp,pcf8523";

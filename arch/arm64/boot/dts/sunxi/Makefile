@@ -12,6 +12,7 @@ dtb-$(CONFIG_ARCH_SUN50IW6P1) += sun50iw6p1-soc.dtb tm3-tm3.dtb tm3-tmxdevboard.
 				tm3-hb8-7-c.dtb \
 				tm3-hb8-7-r.dtb \
 				tm3-hb8-9-c.dtb \
+				tm3-hb8-12-c.dtb \
 				tm3-hb5-43-c.dtb \
 				tm3-hb5-43-r.dtb \
 				tm3-hb5-12-c.dtb \
