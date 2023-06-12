@@ -63,7 +63,6 @@ ccflags-y += -DCONFIG_SSV6XXX_DEBUGFS
 
 ccflags-y += -DCONFIG_SDIO_FAVOR_RX
 ccflags-y += -DCONFIG_MMC_DISALLOW_STACK
-ccflags-y += -DSSV6X5X_PM_MOD
 
 ifeq ($(CONFIG_SSV6X5X_HCI_BLE),y)
 ccflags-y += -DCONFIG_BLE

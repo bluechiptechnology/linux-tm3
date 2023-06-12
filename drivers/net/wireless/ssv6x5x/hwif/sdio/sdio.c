@@ -1542,11 +1542,7 @@ static void ssv6xxx_sdio_rx_task(struct device *child,
 #ifdef CONFIG_PM
 static int ssv6xxx_sdio_suspend_late(struct device *child)
 {
-#ifdef SSV6X5X_PM_MOD
-	struct ssv6xxx_sdio_glue *glue = dev_get_drvdata(child);
-#else
 	struct ssv6xxx_sdio_glue *glue = dev_get_drvdata(child->parent);
-#endif
 	struct sdio_func *func = dev_to_sdio_func(glue->dev);
     int ret = 0;
     mmc_pm_flag_t flags = sdio_get_host_pm_caps(func);
@@ -1592,7 +1588,7 @@ static int ssv6xxx_sdio_suspend_late(struct device *child)
     cancel_work_sync((struct work_struct *)&glue->rx_work);
 
     HWIF_HAL_DISABLE_SDIO_RESET(glue);
-#ifdef SSV6X5X_PM_MOD
+#if 0
     sdio_claim_host(func);
 
     ret = sdio_release_irq(func);
@@ -1630,11 +1626,7 @@ static int ssv6xxx_sdio_suspend_late(struct device *child)
 }
 static int ssv6xxx_sdio_resume_early(struct device *child)
 {
-#ifdef SSV6X5X_PM_MOD
-	struct ssv6xxx_sdio_glue *glue = dev_get_drvdata(child);
-#else
 	struct ssv6xxx_sdio_glue *glue = dev_get_drvdata(child->parent);
-#endif
 	struct sdio_func *func = NULL;
 #ifndef CONFIG_MIFI
     int ret;
@@ -1685,7 +1677,7 @@ static int ssv6xxx_sdio_resume_early(struct device *child)
 
     ssv6xxx_sdio_direct_int_mux_mode(glue, false);
 
-#ifdef SSV6X5X_PM_MOD
+#if 0
     sdio_claim_host(func);
 
     //ret = sdio_release_irq(func);
@@ -2355,26 +2347,15 @@ static void ssv6xxx_sdio_remove(struct sdio_func *func)
 #ifdef CONFIG_PM
 static int ssv6xxx_sdio_suspend(struct device *dev)
 {
-
-#ifdef SSV6X5X_PM_MOD
-	pr_err("ssv6x5x: sdio suspend\n");
-	return ssv6xxx_sdio_suspend_late(dev);
-#else
     /* Moved to ssv6xxx_sdio_suspend_late(). */
     return 0;
-#endif
 }
 
 
 static int ssv6xxx_sdio_resume(struct device *dev)
 {
-#ifdef SSV6X5X_PM_MOD
-	pr_err("ssv6x5x: sdio resume\n");
-	return ssv6xxx_sdio_resume_early(dev);
-#else
     /* Moved to ssv6xxx_sdio_resume_early(). */
     return 0;
-#endif
 }
 
 static const struct dev_pm_ops ssv6xxx_sdio_pm_ops =
