@@ -100,6 +100,7 @@ static void __init of_sunxi_pll_clk_setup(struct device_node *node)
 	const char *clk_name = node->name;
 	const char *lock_mode = NULL;
 	struct factor_init_data *factor;
+	u32 sdm_val;
 
 	if (of_property_read_string(node, "clock-output-names", &clk_name)) {
 		pr_err("%s:get clock-output-names failed in %s node\n",
@@ -114,6 +115,11 @@ static void __init of_sunxi_pll_clk_setup(struct device_node *node)
 
 	if (!of_property_read_string(node, "lock-mode", &lock_mode))
 		sunxi_clk_set_factor_lock_mode(factor, lock_mode);
+
+	if (!of_property_read_u32(node, "sdm-val", &sdm_val)) {
+		pr_warn("clk: DTB found SDM setting on: %s reg=0x%08x, val=0x%08x\n", clk_name, (u32) factor->config->sdmpat, sdm_val);
+		sunxi_clk_set_factor_sdm_val(factor, sdm_val);
+	}
 
 	clk = sunxi_clk_register_factors(NULL, sunxi_clk_base,
 					 &clk_lock, factor);

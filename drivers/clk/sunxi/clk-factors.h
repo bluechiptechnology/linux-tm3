@@ -103,8 +103,8 @@ struct sunxi_clk_factors_config {
 	u8 sdmshift;
 	u8 sdmwidth;
 
-	unsigned long sdmpat;
-	u32 sdmval;
+	unsigned long sdmpat; /* SDM pattern control register address offset */
+	u32 sdmval;  /* SDM pattern control register value */
 
 	u32 updshift;
 	u32 delay;
@@ -377,4 +377,6 @@ int sunxi_clk_com_ftr_sr(struct sunxi_clk_factors_config *f_config,
 void sunxi_clk_set_factor_lock_mode(struct factor_init_data *factor,
 			const char *lock_mode);
 
+void sunxi_clk_set_factor_sdm_val(struct factor_init_data *factor,
+		u32 sdm_val);
 #endif

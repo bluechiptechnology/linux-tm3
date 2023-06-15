@@ -122,6 +122,7 @@ static int sunxi_clk_fators_enable(struct clk_hw *hw)
 	/* get factor register value */
 	reg = factor_readl(factor, factor->reg);
 	if (config->sdmwidth) {
+		pr_warn("clk: enabling SDM on reg: 0x%08x\n", (u32)config->sdmpat);
 		factor_writel(factor, config->sdmval,
 			 (void __iomem *)config->sdmpat);
 		reg = SET_BITS(config->sdmshift, config->sdmwidth, reg, 1);
@@ -486,6 +487,7 @@ static int sunxi_clk_factors_set_rate(struct clk_hw *hw, unsigned long rate, uns
 
 	reg = factor_readl(factor, factor->reg);
 	if (config->sdmwidth) {
+		pr_warn("clk: set_rate SDM on reg: 0x%08x\n", (u32)config->sdmpat);
 		factor_writel(factor, config->sdmval, (void __iomem *)config->sdmpat);
 		reg = SET_BITS(config->sdmshift, config->sdmwidth, reg, 1);
 	}
@@ -553,6 +555,18 @@ void sunxi_clk_set_factor_lock_mode(struct factor_init_data *factor,
 		factor->lock_mode = PLL_LOCK_OLD_MODE;
 	else
 		factor->lock_mode = PLL_LOCK_NONE_MODE;
+}
+
+/*
+ * sunxi_clk_set_factor_sdm_val() - Set factor's sdm pattern register value (Spread spectrum configuration)
+ */
+void sunxi_clk_set_factor_sdm_val(struct factor_init_data *factor,
+		u32 sdm_val)
+{
+	if (factor->config->sdmpat) { /* check the SDM pattern register exists for this clock */
+		factor->config->sdmwidth = 1; /* ensure the enable bit is set */
+		factor->config->sdmval = sdm_val;
+	}
 }
 
 /**
