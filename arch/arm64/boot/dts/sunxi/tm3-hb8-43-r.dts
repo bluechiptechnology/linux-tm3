@@ -3,10 +3,10 @@
 
 &tsc2046{
 	status = "okay";
-	ti,x-min = /bits/ 16 <130>;
-	ti,x-max = /bits/ 16 <3990>;
-	ti,y-max = /bits/ 16 <200>;
-	ti,y-min = /bits/ 16 <3926>;
+	android,ti,x-min = /bits/ 16 <130>;
+	android,ti,x-max = /bits/ 16 <3990>;
+	android,ti,y-max = /bits/ 16 <200>;
+	android,ti,y-min = /bits/ 16 <3926>;
 };
 
 &pcap{

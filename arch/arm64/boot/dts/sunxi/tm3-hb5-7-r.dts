@@ -5,10 +5,10 @@
 /* resistive touch screen */
 &tsc2046{
 	status = "okay";
-	ti,x-min = /bits/ 16 <112>;
-	ti,x-max = /bits/ 16 <3970>;
-	ti,y-max = /bits/ 16 <170>;
-	ti,y-min = /bits/ 16 <3856>;
+	android,ti,x-min = /bits/ 16 <112>;
+	android,ti,x-max = /bits/ 16 <3970>;
+	android,ti,y-max = /bits/ 16 <170>;
+	android,ti,y-min = /bits/ 16 <3856>;
 };
 
 
