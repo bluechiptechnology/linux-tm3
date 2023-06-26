@@ -1312,10 +1312,17 @@ static const struct ads7846_platform_data *ads7846_probe_dt(struct device *dev)
 	of_property_read_u16(node, "ti,x-plate-ohms", &pdata->x_plate_ohms);
 	of_property_read_u16(node, "ti,y-plate-ohms", &pdata->y_plate_ohms);
 
+#ifdef CONFIG_ANDROID
+	of_property_read_u16(node, "android,ti,x-min", &pdata->x_min);
+	of_property_read_u16(node, "android,ti,y-min", &pdata->y_min);
+	of_property_read_u16(node, "android,ti,x-max", &pdata->x_max);
+	of_property_read_u16(node, "android,ti,y-max", &pdata->y_max);
+#else
 	of_property_read_u16(node, "ti,x-min", &pdata->x_min);
 	of_property_read_u16(node, "ti,y-min", &pdata->y_min);
 	of_property_read_u16(node, "ti,x-max", &pdata->x_max);
 	of_property_read_u16(node, "ti,y-max", &pdata->y_max);
+#endif
 
 	of_property_read_u16(node, "ti,pressure-min", &pdata->pressure_min);
 	of_property_read_u16(node, "ti,pressure-max", &pdata->pressure_max);
